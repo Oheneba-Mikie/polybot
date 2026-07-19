@@ -335,10 +335,10 @@ def run_probe_phase(ws: WSFeed, ptb: float, w_end: int, market: dict, clob_clien
                     else:
                         # Determine required move based on mark countdown tier
                         if mark >= 70:
-                            print(f"  ⏭️  T-{mark}s: Too early to buy — skipping...")
-                            continue
-                        elif 35 <= mark <= 60:
                             required_move = 30.0
+                            tier_desc = "mega-move"
+                        elif 35 <= mark <= 60:
+                            required_move = 20.0
                             tier_desc = "early double-move"
                         elif 15 <= mark <= 30:
                             required_move = 15.0

@@ -1,20 +1,17 @@
 #!/usr/bin/env python3
 """
-50_percent_trading_bot.py — Improved Polymarket timing bot designed to prevent
-slippage losses when the price is too close to the boundary (PTB) and automatically
-compounds 50% of the live wallet balance on every rollover.
+rollover_winnings_bot.py — Improved Polymarket timing bot designed to prevent
+slippage losses using multi-tier timing rules and automatically rolls over 100%
+of your winnings on successful streaks.
 
-Features:
-  1. DYNAMIC STAKING: Queries the live pUSD balance of your proxy wallet at the
-     start of every 5-minute cycle and stakes exactly 50% of the balance (minimum $1.00).
-  2. MULTI-TIER TIMING:
-     - T-80s/T-70s: Too early, skipped entirely.
-     - T-60s to T-35s: Only bets on massive trend moves ($30.00+).
-     - T-30s to T-15s: Bets on normal trend moves ($15.00+).
-     - T-12s to T-5s: Bets on close trend moves ($5.00+).
-  3. REAL-TIME FRESHNESS CHECK: Verifies that the current live BTC price matches
-     the signal side before ordering.
-  4. AUTO-RECONNECT WEBSOCKET: Reconnects to Polymarket feed automatically if connection drops.
+Winnings Rollover Compounding:
+  1. Starting Stake: Starts at $1.00.
+  2. Streak Rollover: If we win, the payout (stake + profit) becomes the stake
+     for the next trade. (e.g. $1.00 -> $1.02 -> $1.04...).
+  3. Reset on Loss: If we lose, the streak is broken and we reset the stake back
+     to $1.00.
+  4. Rest of Wallet Safe: Your remaining balance is never risked; only the initial
+     $1.00 + accumulated profits from the current streak are staked.
 """
 
 import json
@@ -45,7 +42,7 @@ CLOB_HOST     = "https://clob.polymarket.com"
 WINDOW_SECS   = 300          # 5-minute window
 
 WAKE_UP_BEFORE      = 90    # seconds before close to start streaming/probing
-DEFAULT_STAKE_USD   = 1.00  # fallback stake per trade
+STARTING_STAKE_USD  = 1.00  # initial stake at the start of a streak
 
 # Bet window: place bet at the FIRST probe within this range
 BET_WINDOW_START    = 80    # earliest we'll check (T-80s)
@@ -240,7 +237,7 @@ def run_probe_phase(ws: WSFeed, ptb: float, w_end: int, market: dict, clob_clien
 
     print(f"\n  Streaming last {WAKE_UP_BEFORE}s — probes at: {PROBE_MARKS}s before close")
     print(f"  Safety Rules:")
-    print(f"    - Target Stake    : ${stake_usd:.2f} (50% Compound)")
+    print(f"    - Current Stake   : ${stake_usd:.2f}")
     print(f"  {'─'*72}")
 
     while True:
@@ -450,8 +447,9 @@ def settle(slug, decided_side, entry_price, stake_usd):
             print(f"  🎯 Outcome    : {actual}")
             print(f"  💰 P&L        : ${pnl:>+.4f}  (stake ${stake_usd:.2f})")
             print(f"  ════════════════════════════════════════════════\n")
-            return
+            return won
     print("  ⚠️  Market did not resolve within the wait period.")
+    return None
 
 
 # ── Summary table ─────────────────────────────────────────────────────────────────
@@ -502,7 +500,7 @@ def print_summary(results, w_start, w_end, ptb, last_price, decided_side, entry_
 def main():
     mode_str = "LIVE BET" if POLYMARKET_LIVE_TRADING else "PAPER BET"
     print(f"\n{'═'*72}")
-    print(f"  50% COMPOUNDING TRADING BOT  +  {mode_str}")
+    print(f"  STREAK ROLLOVER COMPOUNDING BOT  +  {mode_str}")
     print(f"{'═'*72}\n")
 
     clob_client = None
@@ -567,6 +565,8 @@ def main():
     btc_now, _ = tick
     print(f"  ✅ WS connected — BTC/USD: ${btc_now:,.2f}\n")
 
+    current_stake = STARTING_STAKE_USD
+
     # ── Continuous Trading Loop ──────────────────────────────────────────────────
     while True:
         try:
@@ -576,28 +576,13 @@ def main():
             secs_into = now - w_s
             remaining = w_e - now
 
-            # Fetch live balance and calculate dynamic stake (50%)
-            current_stake = DEFAULT_STAKE_USD
-            if clob_client is not None:
-                try:
-                    from py_clob_client_v2.clob_types import BalanceAllowanceParams, AssetType
-                    params = BalanceAllowanceParams(asset_type=AssetType.COLLATERAL)
-                    balance_resp = clob_client.get_balance_allowance(params)
-                    raw_bal = float(balance_resp.get("balance", 0))
-                    live_balance = raw_bal / 1_000_000.0
-                    # Calculate 50% compound stake, minimum $1.00
-                    current_stake = max(1.0, round(live_balance * 0.50, 2))
-                    print(f"  💰 Live Wallet Balance: ${live_balance:.4f} pUSD")
-                    print(f"  🎯 Rollover Stake Size (50%): ${current_stake:.2f} pUSD")
-                except Exception as e:
-                    print(f"  ⚠️ Could not fetch live balance: {e}. Using fallback stake: ${DEFAULT_STAKE_USD:.2f}")
-
             print(f"\n{'═'*72}")
             print(f"  🆕 STARTING NEW CYCLE")
             print(f"  Current time   : {fmt(now)}")
             print(f"  Current window : {fmt_win(w_s)}")
             print(f"  Into window    : {int(secs_into)}s  |  Remaining: {int(remaining)}s")
-            print(f"  Stake          : ${current_stake:.2f}  |  Bet window: T-{BET_WINDOW_START}s → T-{BET_WINDOW_END}s")
+            print(f"  Streak Stake   : ${current_stake:.2f} pUSD")
+            print(f"  Bet window     : T-{BET_WINDOW_START}s → T-{BET_WINDOW_END}s")
             print(f"{'═'*72}\n")
 
             # ── Determine PTB and target window ──────────────────────────────────────
@@ -666,11 +651,22 @@ def main():
             # ── Window close summary ──────────────────────────────────────────────────
             print_summary(results, w_s, w_e, ptb, last_price, decided_side, entry_price, stake_usd=current_stake)
 
-            # ── Settle ────────────────────────────────────────────────────────────────
+            # ── Settle & Streak Rollover Compounding ──────────────────────────────────
             if decided_side and entry_price:
-                settle(slug, decided_side, entry_price, stake_usd=current_stake)
+                won = settle(slug, decided_side, entry_price, stake_usd=current_stake)
+                if won is True:
+                    payout = current_stake / entry_price
+                    # Rollover full payout for next trade (rounded to 2 decimal cents)
+                    current_stake = round(payout, 2)
+                    print(f"  💰 [STREAK WIN] rolled over! Next stake is: ${current_stake:.2f} pUSD\n")
+                elif won is False:
+                    current_stake = STARTING_STAKE_USD
+                    print(f"  ❌ [STREAK BROKEN] Resetting stake to starting capital: ${current_stake:.2f} pUSD\n")
+                else:
+                    # Timeout / did not resolve: keep current stake same for next cycle
+                    print(f"  ⚠️ [UNRESOLVED] Keeping current stake as: ${current_stake:.2f} pUSD for next cycle\n")
             else:
-                print("  ℹ️  No bet was placed — nothing to settle.")
+                print("  ℹ️  No bet was placed — nothing to settle. Stake stays unchanged.")
 
             # Small cooldown sleep to ensure we cross the boundary into the next window
             time.sleep(2)
