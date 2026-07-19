@@ -1,16 +1,20 @@
 #!/usr/bin/env python3
 """
-close_to_market_bot.py — Improved Polymarket timing bot designed to prevent
-slippage losses when the price is too close to the boundary (PTB).
+50_percent_trading_bot.py — Improved Polymarket timing bot designed to prevent
+slippage losses when the price is too close to the boundary (PTB) and automatically
+compounds 50% of the live wallet balance on every rollover.
 
-Safety Features:
-  1. MIN_PRICE_MOVE: Only trade if BTC has moved at least $15.00 away from the PTB.
-     This avoids risky, low-margin trades where a small fluctuation flips the result.
-  2. MAX_PRICE_LIMIT: Avoid buying extremely expensive contracts (e.g., > $0.90)
-     where risk-to-reward is terrible.
-  3. REAL-TIME FRESHNESS CHECK: Before posting the trade, verifies that the current
-     live BTC price is still on the same side as the signal. If the signal is UP
-     but BTC has slipped below the PTB, the trade is cancelled instantly.
+Features:
+  1. DYNAMIC STAKING: Queries the live pUSD balance of your proxy wallet at the
+     start of every 5-minute cycle and stakes exactly 50% of the balance (minimum $1.00).
+  2. MULTI-TIER TIMING:
+     - T-80s/T-70s: Too early, skipped entirely.
+     - T-60s to T-35s: Only bets on massive trend moves ($30.00+).
+     - T-30s to T-15s: Bets on normal trend moves ($15.00+).
+     - T-12s to T-5s: Bets on close trend moves ($5.00+).
+  3. REAL-TIME FRESHNESS CHECK: Verifies that the current live BTC price matches
+     the signal side before ordering.
+  4. AUTO-RECONNECT WEBSOCKET: Reconnects to Polymarket feed automatically if connection drops.
 """
 
 import json
@@ -41,16 +45,14 @@ CLOB_HOST     = "https://clob.polymarket.com"
 WINDOW_SECS   = 300          # 5-minute window
 
 WAKE_UP_BEFORE      = 90    # seconds before close to start streaming/probing
-STAKE_USD           = 1.00  # paper/live stake per trade
+DEFAULT_STAKE_USD   = 1.00  # fallback stake per trade
 
 # Bet window: place bet at the FIRST probe within this range
-BET_WINDOW_START    = 80    # earliest we'll bet (T-80s)
+BET_WINDOW_START    = 80    # earliest we'll check (T-80s)
 BET_WINDOW_END      = 5     # latest we'll bet  (T-5s)
 
 # Strategy Rules:
 CONFIDENCE_THRESHOLD = 0.65  # dominant side must be priced at $0.65+
-MAX_PRICE_LIMIT      = 0.90  # do NOT buy if contract is $0.90 or higher (poor risk/reward)
-MIN_PRICE_MOVE       = 15.0  # BTC must be at least $15 away from the Price to Beat (PTB)
 
 # Order-book probe marks (seconds before close)
 PROBE_MARKS = [80, 70, 60, 50, 40, 35, 30, 25, 20, 18, 15, 12, 10, 8, 5, 3, 2, 1, 0]
@@ -219,7 +221,7 @@ def check_resolution(slug):
 
 
 # ── Probe + bet phase ─────────────────────────────────────────────────────────────
-def run_probe_phase(ws: WSFeed, ptb: float, w_end: int, market: dict, clob_client=None):
+def run_probe_phase(ws: WSFeed, ptb: float, w_end: int, market: dict, clob_client=None, stake_usd=1.00):
     last_tick_ts       = None
     last_price         = ptb
     tick_count         = 0
@@ -238,8 +240,7 @@ def run_probe_phase(ws: WSFeed, ptb: float, w_end: int, market: dict, clob_clien
 
     print(f"\n  Streaming last {WAKE_UP_BEFORE}s — probes at: {PROBE_MARKS}s before close")
     print(f"  Safety Rules:")
-    print(f"    - Min Price Move  : ${MIN_PRICE_MOVE:.2f} away from PTB (${ptb:,.2f})")
-    print(f"    - Max Contract Cap: ${MAX_PRICE_LIMIT:.2f}")
+    print(f"    - Target Stake    : ${stake_usd:.2f} (50% Compound)")
     print(f"  {'─'*72}")
 
     while True:
@@ -365,12 +366,11 @@ def run_probe_phase(ws: WSFeed, ptb: float, w_end: int, market: dict, clob_clien
                         # Check if the signal side still has liquidity right now
                         sig_ask = up_ask if last_clear_signal == "UP" else down_ask
                         if sig_ask is not None:
-
                             decided_side = last_clear_signal
                             entry_price  = sig_ask
                             results[-1]["bet_placed"] = True
-                            payout = STAKE_USD / entry_price
-                            profit = payout - STAKE_USD
+                            payout = stake_usd / entry_price
+                            profit = payout - stake_usd
                             flip_warn = (
                                 f"  ⚡ Note: signal flipped at T-{signal_flip_at_mark}s"
                                 if signal_flip_at_mark else ""
@@ -387,7 +387,7 @@ def run_probe_phase(ws: WSFeed, ptb: float, w_end: int, market: dict, clob_clien
                                     resp = clob_client.create_and_post_market_order(
                                         order_args=MarketOrderArgsV2(
                                             token_id=token_id,
-                                            amount=STAKE_USD,
+                                            amount=stake_usd,
                                             side="BUY"
                                         )
                                     )
@@ -409,7 +409,7 @@ def run_probe_phase(ws: WSFeed, ptb: float, w_end: int, market: dict, clob_clien
                                 f"\n  │  🎯 {order_msg:<9}  →  {decided_side:<4}  @ ${entry_price:.4f}  (T-{mark}s)           │"
                                 f"\n  │  Signal from T-{last_clear_mark}s: UP=${last_clear_up_ask:.4f}  "
                                 f"DOWN=${last_clear_down_ask:.4f}           │"
-                                f"\n  │  Stake: ${STAKE_USD:.2f}   Payout: ${payout:.4f}  Profit: +${profit:.4f}           │"
+                                f"\n  │  Stake: ${stake_usd:.2f}   Payout: ${payout:.4f}  Profit: +${profit:.4f}           │"
                                 + order_details +
                                 f"\n  └──────────────────────────────────────────────────────────┘"
                                 + (f"\n  {flip_warn}" if flip_warn else "")
@@ -434,7 +434,7 @@ def run_probe_phase(ws: WSFeed, ptb: float, w_end: int, market: dict, clob_clien
 
 
 # ── Settlement ────────────────────────────────────────────────────────────────────
-def settle(slug, decided_side, entry_price):
+def settle(slug, decided_side, entry_price, stake_usd):
     print(f"\n  ⏳ Polling for market resolution ({slug})...")
     for attempt in range(1, SETTLE_MAX_ATTEMPTS + 1):
         time.sleep(SETTLE_POLL_INTERVAL)
@@ -443,19 +443,19 @@ def settle(slug, decided_side, entry_price):
         if up_won is not None:
             actual = "UP ▲" if up_won else "DOWN ▼"
             won = (decided_side == "UP" and up_won) or (decided_side == "DOWN" and not up_won)
-            pnl = STAKE_USD * (1 / entry_price - 1) if won else -STAKE_USD
+            pnl = stake_usd * (1 / entry_price - 1) if won else -stake_usd
             print(f"\n  ════════════════════════════════════════════════")
             print(f"  🏆 RESULT     : {'WIN  ✅' if won else 'LOSS ❌'}")
             print(f"  📌 We bet     : {decided_side}")
             print(f"  🎯 Outcome    : {actual}")
-            print(f"  💰 P&L        : ${pnl:>+.4f}  (stake ${STAKE_USD:.2f})")
+            print(f"  💰 P&L        : ${pnl:>+.4f}  (stake ${stake_usd:.2f})")
             print(f"  ════════════════════════════════════════════════\n")
             return
     print("  ⚠️  Market did not resolve within the wait period.")
 
 
 # ── Summary table ─────────────────────────────────────────────────────────────────
-def print_summary(results, w_start, w_end, ptb, last_price, decided_side, entry_price):
+def print_summary(results, w_start, w_end, ptb, last_price, decided_side, entry_price, stake_usd):
     net = last_price - ptb
     direction = "UP ▲" if net > 0 else "DOWN ▼"
 
@@ -502,7 +502,7 @@ def print_summary(results, w_start, w_end, ptb, last_price, decided_side, entry_
 def main():
     mode_str = "LIVE BET" if POLYMARKET_LIVE_TRADING else "PAPER BET"
     print(f"\n{'═'*72}")
-    print(f"  CLOSE TO MARKET BOT (CONTINUOUS LOOP)  +  {mode_str}")
+    print(f"  50% COMPOUNDING TRADING BOT  +  {mode_str}")
     print(f"{'═'*72}\n")
 
     clob_client = None
@@ -576,12 +576,28 @@ def main():
             secs_into = now - w_s
             remaining = w_e - now
 
+            # Fetch live balance and calculate dynamic stake (50%)
+            current_stake = DEFAULT_STAKE_USD
+            if clob_client is not None:
+                try:
+                    from py_clob_client_v2.clob_types import BalanceAllowanceParams, AssetType
+                    params = BalanceAllowanceParams(asset_type=AssetType.COLLATERAL)
+                    balance_resp = clob_client.get_balance_allowance(params)
+                    raw_bal = float(balance_resp.get("balance", 0))
+                    live_balance = raw_bal / 1_000_000.0
+                    # Calculate 50% compound stake, minimum $1.00
+                    current_stake = max(1.0, round(live_balance * 0.50, 2))
+                    print(f"  💰 Live Wallet Balance: ${live_balance:.4f} pUSD")
+                    print(f"  🎯 Rollover Stake Size (50%): ${current_stake:.2f} pUSD")
+                except Exception as e:
+                    print(f"  ⚠️ Could not fetch live balance: {e}. Using fallback stake: ${DEFAULT_STAKE_USD:.2f}")
+
             print(f"\n{'═'*72}")
             print(f"  🆕 STARTING NEW CYCLE")
             print(f"  Current time   : {fmt(now)}")
             print(f"  Current window : {fmt_win(w_s)}")
             print(f"  Into window    : {int(secs_into)}s  |  Remaining: {int(remaining)}s")
-            print(f"  Stake          : ${STAKE_USD:.2f}  |  Bet window: T-{BET_WINDOW_START}s → T-{BET_WINDOW_END}s")
+            print(f"  Stake          : ${current_stake:.2f}  |  Bet window: T-{BET_WINDOW_START}s → T-{BET_WINDOW_END}s")
             print(f"{'═'*72}\n")
 
             # ── Determine PTB and target window ──────────────────────────────────────
@@ -612,7 +628,6 @@ def main():
 
             if ptb is None:
                 print("  ❌ Could not capture PTB in 30s — skipping this window.")
-                # Sleep until next window boundary
                 sleep_time = max(10, w_e - time.time())
                 time.sleep(sleep_time)
                 continue
@@ -645,15 +660,15 @@ def main():
 
             # ── Run the probe + bet phase ─────────────────────────────────────────────
             results, decided_side, entry_price, last_price = run_probe_phase(
-                ws, ptb, w_e, market, clob_client=clob_client
+                ws, ptb, w_e, market, clob_client=clob_client, stake_usd=current_stake
             )
 
             # ── Window close summary ──────────────────────────────────────────────────
-            print_summary(results, w_s, w_e, ptb, last_price, decided_side, entry_price)
+            print_summary(results, w_s, w_e, ptb, last_price, decided_side, entry_price, stake_usd=current_stake)
 
             # ── Settle ────────────────────────────────────────────────────────────────
             if decided_side and entry_price:
-                settle(slug, decided_side, entry_price)
+                settle(slug, decided_side, entry_price, stake_usd=current_stake)
             else:
                 print("  ℹ️  No bet was placed — nothing to settle.")
 
@@ -671,4 +686,3 @@ if __name__ == "__main__":
         main()
     except KeyboardInterrupt:
         print("\n  Stopped by user.")
-
