@@ -58,6 +58,12 @@ SETTLE_POLL_INTERVAL = 5     # seconds between resolution checks
 SETTLE_MAX_ATTEMPTS  = 60    # give up after 5 minutes
 
 
+# ── Global state for asynchronous streak tracking ──────────────────────────────
+current_stake = STARTING_STAKE_USD
+streak_lock = threading.Lock()
+active_settle_thread = None
+
+
 # ── SSL + WS headers ────────────────────────────────────────────────────────────
 def make_ssl_ctx():
     ctx = ssl.create_default_context()
@@ -328,6 +334,9 @@ def run_probe_phase(ws: WSFeed, ptb: float, w_end: int, market: dict, clob_clien
                 # ── Bet logic: fire within bet window ────────────────────────
                 in_bet_window = (BET_WINDOW_END <= mark <= BET_WINDOW_START)
                 if in_bet_window and decided_side is None:
+                    global current_stake
+                    stake_usd = current_stake
+
                     if last_clear_signal is None:
                         print(f"  ⏭️  T-{mark}s: No active/fresh signal — skipping...")
                     else:
@@ -651,20 +660,32 @@ def main():
             # ── Window close summary ──────────────────────────────────────────────────
             print_summary(results, w_s, w_e, ptb, last_price, decided_side, entry_price, stake_usd=current_stake)
 
-            # ── Settle & Streak Rollover Compounding ──────────────────────────────────
+            # ── Settle & Streak Rollover Compounding (Instant self-calculation + BG logs) ──
             if decided_side and entry_price:
-                won = settle(slug, decided_side, entry_price, stake_usd=current_stake)
-                if won is True:
-                    payout = current_stake / entry_price
-                    # Rollover full payout for next trade (rounded to 2 decimal cents)
+                # 1. Instant self-calculation of win/loss
+                actual_direction = "UP" if (last_price > ptb) else "DOWN"
+                calculated_won = (decided_side == actual_direction)
+                
+                old_stake = current_stake
+                if calculated_won:
+                    payout = old_stake / entry_price
                     current_stake = round(payout, 2)
-                    print(f"  💰 [STREAK WIN] rolled over! Next stake is: ${current_stake:.2f} pUSD\n")
-                elif won is False:
-                    current_stake = STARTING_STAKE_USD
-                    print(f"  ❌ [STREAK BROKEN] Resetting stake to starting capital: ${current_stake:.2f} pUSD\n")
+                    print(f"  💰 [STREAK WIN (CALCULATED)] Rolled over! Next stake is: ${current_stake:.2f} pUSD")
                 else:
-                    # Timeout / did not resolve: keep current stake same for next cycle
-                    print(f"  ⚠️ [UNRESOLVED] Keeping current stake as: ${current_stake:.2f} pUSD for next cycle\n")
+                    current_stake = STARTING_STAKE_USD
+                    print(f"  ❌ [STREAK LOSS (CALCULATED)] Resetting stake to: ${current_stake:.2f} pUSD")
+                
+                # 2. Spawn background settle log task (just for verification and visual feedback)
+                def bg_settle_task(slug_val, side_val, price_val, stake_val):
+                    settle(slug_val, side_val, price_val, stake_val)
+
+                global active_settle_thread
+                active_settle_thread = threading.Thread(
+                    target=bg_settle_task,
+                    args=(slug, decided_side, entry_price, old_stake),
+                    daemon=True
+                )
+                active_settle_thread.start()
             else:
                 print("  ℹ️  No bet was placed — nothing to settle. Stake stays unchanged.")
 
