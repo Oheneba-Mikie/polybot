@@ -29,17 +29,6 @@ import datetime
 import threading
 import requests
 import websocket
-from dotenv import load_dotenv
-
-# Load environment variables from .env
-load_dotenv()
-
-POLYMARKET_LIVE_TRADING = os.getenv("POLYMARKET_LIVE_TRADING", "False").lower() in ("true", "1", "yes")
-POLYMARKET_ADDRESS = os.getenv("POLYMARKET_ADDRESS")
-POLYMARKET_API_KEY = os.getenv("POLYMARKET_API_KEY")
-POLYMARKET_API_SECRET = os.getenv("POLYMARKET_API_SECRET")
-POLYMARKET_API_PASSPHRASE = os.getenv("POLYMARKET_API_PASSPHRASE")
-POLYMARKET_PRIVATE_KEY = os.getenv("POLYMARKET_PRIVATE_KEY")
 
 # ── Config ──────────────────────────────────────────────────────────────────────
 LIVE_WS_URL   = "wss://ws-live-data.polymarket.com/"
@@ -217,7 +206,7 @@ def check_resolution(slug):
 
 
 # ── Probe + paper bet phase ───────────────────────────────────────────────────────
-def run_probe_phase(ws: WSFeed, ptb: float, w_end: int, market: dict, clob_client=None):
+def run_probe_phase(ws: WSFeed, ptb: float, w_end: int, market: dict):
     """
     Stream the last WAKE_UP_BEFORE seconds of a window, probe the order book at
     each PROBE_MARKS countdown.
@@ -320,7 +309,6 @@ def run_probe_phase(ws: WSFeed, ptb: float, w_end: int, market: dict, clob_clien
                     "down_ask": down_ask, "n_down": n_down,
                     "has_liquidity": has_liq,
                     "signal": last_clear_signal,
-                    "bet_placed": False,
                 })
 
                 # ── Bet logic: fire within bet window ────────────────────────
@@ -334,43 +322,18 @@ def run_probe_phase(ws: WSFeed, ptb: float, w_end: int, market: dict, clob_clien
                         if sig_ask is not None:
                             decided_side = last_clear_signal
                             entry_price  = sig_ask
-                            results[-1]["bet_placed"] = True
                             payout = STAKE_USD / entry_price
                             profit = payout - STAKE_USD
                             flip_warn = (
                                 f"  ⚡ Note: signal flipped at T-{signal_flip_at_mark}s"
                                 if signal_flip_at_mark else ""
                             )
-                            
-                            # If clob_client is provided, attempt live order placement
-                            order_msg = "PAPER BET"
-                            order_details = ""
-                            if clob_client is not None:
-                                order_msg = "LIVE BET"
-                                print(f"\n  🚀 PLACING LIVE ORDER on Polymarket CLOB: {decided_side} outcome...")
-                                try:
-                                    from py_clob_client_v2 import MarketOrderArgsV2
-                                    token_id = market["up_id"] if decided_side == "UP" else market["down_id"]
-                                    resp = clob_client.create_and_post_market_order(
-                                        order_args=MarketOrderArgsV2(
-                                            token_id=token_id,
-                                            amount=STAKE_USD,
-                                            side="BUY"
-                                        )
-                                    )
-                                    print(f"  ✅ Live order response: {resp}")
-                                    order_details = f"\n  │  Order ID: {resp.get('orderID', 'n/a')}                                   │"
-                                except Exception as e:
-                                    print(f"  ❌ Failed to place live order: {e}")
-                                    order_msg = "LIVE BET (FAILED)"
-                            
                             print(
                                 f"\n  ┌──────────────────────────────────────────────────────────┐"
-                                f"\n  │  🎯 {order_msg:<9}  →  {decided_side:<4}  @ ${entry_price:.4f}  (T-{mark}s)           │"
+                                f"\n  │  🎯 PAPER BET  →  {decided_side:<4}  @ ${entry_price:.4f}  (T-{mark}s)           │"
                                 f"\n  │  Signal from T-{last_clear_mark}s: UP=${last_clear_up_ask:.4f}  "
                                 f"DOWN=${last_clear_down_ask:.4f}           │"
                                 f"\n  │  Stake: ${STAKE_USD:.2f}   Payout: ${payout:.4f}  Profit: +${profit:.4f}           │"
-                                + order_details +
                                 f"\n  └──────────────────────────────────────────────────────────┘"
                                 + (f"\n  {flip_warn}" if flip_warn else "")
                             )
@@ -443,7 +406,7 @@ def print_summary(results, w_start, w_end, ptb, last_price, decided_side, entry_
         up_str   = f"${r['up_ask']:.4f}"   if r["up_ask"]   else "  NONE  "
         down_str = f"${r['down_ask']:.4f}" if r["down_ask"] else "   NONE  "
         status   = "✅ OPEN" if r["has_liquidity"] else "❌ CLOSED"
-        bet_tag  = "  ← BET" if r.get("bet_placed") else ""
+        bet_tag  = "  ← BET" if r["mark"] == BET_AT_MARK else ""
         print(f"  T-{r['mark']:>4}s  {fmt(r['ts']):>8}  {up_str:>8}  {down_str:>9}  {status}{bet_tag}")
         if r["has_liquidity"]:
             last_open_mark = r["mark"]
@@ -468,60 +431,13 @@ def main():
     secs_into = now - w_s
     remaining = w_e - now
 
-    mode_str = "LIVE BET" if POLYMARKET_LIVE_TRADING else "PAPER BET"
     print(f"\n{'═'*72}")
-    print(f"  PROBE CLOSE TIMING  +  {mode_str}")
+    print(f"  PROBE CLOSE TIMING  +  PAPER BET")
     print(f"  Current time   : {fmt(now)}")
     print(f"  Current window : {fmt_win(w_s)}")
     print(f"  Into window    : {int(secs_into)}s  |  Remaining: {int(remaining)}s")
     print(f"  Stake          : ${STAKE_USD:.2f}  |  Bet window: T-{BET_WINDOW_START}s → T-{BET_WINDOW_END}s")
     print(f"{'═'*72}\n")
-
-    clob_client = None
-    if POLYMARKET_LIVE_TRADING:
-        print("  ⚠️  LIVE TRADING ENABLED! Initializing Polymarket CLOB Client...")
-        if not all([POLYMARKET_ADDRESS, POLYMARKET_API_KEY, POLYMARKET_API_SECRET, POLYMARKET_API_PASSPHRASE, POLYMARKET_PRIVATE_KEY]):
-            print("  ❌ Missing live trading credentials in .env file! Exiting.")
-            sys.exit(1)
-        
-        # Check private key format
-        if not POLYMARKET_PRIVATE_KEY.startswith("0x") or len(POLYMARKET_PRIVATE_KEY) != 66:
-            print(f"  ❌ Invalid private key format. Must start with 0x and be 66 characters long. Exiting.")
-            sys.exit(1)
-            
-        try:
-            from py_clob_client_v2 import ClobClient, ApiCreds
-            from eth_account import Account
-            
-            # Derive EOA address from private key to check if proxy is needed
-            eoa_address = Account.from_key(POLYMARKET_PRIVATE_KEY).address
-            
-            sig_type = 0
-            funder_addr = None
-            if POLYMARKET_ADDRESS and POLYMARKET_ADDRESS.lower() != eoa_address.lower():
-                sig_type = 3  # POLY_1271 (required for new deposit wallets)
-                funder_addr = POLYMARKET_ADDRESS
-                print(f"  👉 Proxy Wallet detected. Using funder={funder_addr} and signature_type=3 (POLY_1271).")
-            else:
-                print(f"  👉 EOA Wallet detected. Using signature_type=0.")
-
-            creds = ApiCreds(
-                api_key=POLYMARKET_API_KEY,
-                api_secret=POLYMARKET_API_SECRET,
-                api_passphrase=POLYMARKET_API_PASSPHRASE
-            )
-            clob_client = ClobClient(
-                host=CLOB_HOST,
-                chain_id=137, # Polygon Mainnet
-                key=POLYMARKET_PRIVATE_KEY,
-                creds=creds,
-                signature_type=sig_type,
-                funder=funder_addr
-            )
-            print("  ✅ CLOB Client initialized successfully.\n")
-        except Exception as e:
-            print(f"  ❌ Error initializing CLOB client: {e}. Exiting.")
-            sys.exit(1)
 
     print("  Connecting to Polymarket WS feed...")
     ws = WSFeed()
@@ -597,7 +513,7 @@ def main():
 
     # ── Run the probe + bet phase ─────────────────────────────────────────────────
     results, decided_side, entry_price, last_price = run_probe_phase(
-        ws, ptb, w_e, market, clob_client=clob_client
+        ws, ptb, w_e, market
     )
 
     # ── Window close summary ──────────────────────────────────────────────────────

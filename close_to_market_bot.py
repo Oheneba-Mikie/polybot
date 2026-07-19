@@ -1,23 +1,16 @@
 #!/usr/bin/env python3
 """
-probe_close_timing.py — Probe market close timing + paper bet with P&L.
+close_to_market_bot.py — Improved Polymarket timing bot designed to prevent
+slippage losses when the price is too close to the boundary (PTB).
 
-Behaviour:
-  • If mid-window  → sleep silently until next window boundary, grab PTB from
-                     the very first tick, then wake up for the final WAKE_UP_BEFORE
-                     seconds of THAT window.
-  • If at boundary → grab PTB immediately, sleep silently until WAKE_UP_BEFORE
-                     seconds before close, then run the probe phase.
-
-Probe phase (last WAKE_UP_BEFORE seconds):
-  • Streams live Chainlink ticks vs PTB.
-  • Hits the order book at each mark in PROBE_MARKS.
-  • At BET_AT_MARK seconds before close, reads the order book and places a
-    PAPER BET on whichever side has the higher ask (market favourite).
-  • After the window closes, polls for resolution and prints P&L.
-
-Usage:
-    python probe_close_timing.py
+Safety Features:
+  1. MIN_PRICE_MOVE: Only trade if BTC has moved at least $15.00 away from the PTB.
+     This avoids risky, low-margin trades where a small fluctuation flips the result.
+  2. MAX_PRICE_LIMIT: Avoid buying extremely expensive contracts (e.g., > $0.90)
+     where risk-to-reward is terrible.
+  3. REAL-TIME FRESHNESS CHECK: Before posting the trade, verifies that the current
+     live BTC price is still on the same side as the signal. If the signal is UP
+     but BTC has slipped below the PTB, the trade is cancelled instantly.
 """
 
 import json
@@ -48,16 +41,16 @@ CLOB_HOST     = "https://clob.polymarket.com"
 WINDOW_SECS   = 300          # 5-minute window
 
 WAKE_UP_BEFORE      = 90    # seconds before close to start streaming/probing
-STAKE_USD           = 1.00  # paper stake per trade
+STAKE_USD           = 1.00  # paper/live stake per trade
 
-# Bet window: place bet at the FIRST probe within this range where
-# the signal side still has liquidity. Both values in seconds before close.
+# Bet window: place bet at the FIRST probe within this range
 BET_WINDOW_START    = 30    # earliest we'll bet (T-30s)
 BET_WINDOW_END      = 5     # latest we'll bet  (T-5s)
 
-# Minimum ask price for the dominant side to count as a confident signal.
-# e.g. 0.65 means dominant side must be priced at $0.65+ (65% probability).
-CONFIDENCE_THRESHOLD = 0.65
+# Strategy Rules:
+CONFIDENCE_THRESHOLD = 0.65  # dominant side must be priced at $0.65+
+MAX_PRICE_LIMIT      = 0.90  # do NOT buy if contract is $0.90 or higher (poor risk/reward)
+MIN_PRICE_MOVE       = 15.0  # BTC must be at least $15 away from the Price to Beat (PTB)
 
 # Order-book probe marks (seconds before close)
 PROBE_MARKS = [80, 70, 60, 50, 40, 35, 30, 25, 20, 18, 15, 12, 10, 8, 5, 3, 2, 1, 0]
@@ -109,6 +102,7 @@ class WSFeed:
         self._ts_ms = None
         self._lock  = threading.Lock()
         self._ready = threading.Event()
+        self._stopped = False
 
     def start(self):
         ssl_ctx = make_ssl_ctx()
@@ -136,9 +130,19 @@ class WSFeed:
                 self._ts_ms = p.get("timestamp")
                 self._ready.set()
 
+        def on_close(ws, close_status_code, close_msg):
+            if not self._stopped:
+                print("  ⚠️ WS connection closed — reconnecting in 2 seconds...")
+                time.sleep(2)
+                self.start()
+
+        def on_error(ws, err):
+            pass
+
         app = websocket.WebSocketApp(
             LIVE_WS_URL, header=WS_HEADERS,
             on_open=on_open, on_message=on_message,
+            on_close=on_close, on_error=on_error
         )
         threading.Thread(
             target=lambda: app.run_forever(
@@ -186,7 +190,6 @@ def resolve_market(slug, timeout=10):
 
 
 def probe_book(token_id, timeout=2):
-    """Return (best_ask or None, n_asks)."""
     try:
         r = requests.get(f"{CLOB_HOST}/book", params={"token_id": token_id}, timeout=timeout)
         r.raise_for_status()
@@ -200,7 +203,6 @@ def probe_book(token_id, timeout=2):
 
 
 def check_resolution(slug):
-    """Returns (up_won: True/False/None, outcome_prices list)."""
     try:
         r = requests.get(f"{GAMMA_HOST}/events", params={"slug": slug}, timeout=5)
         r.raise_for_status()
@@ -216,21 +218,8 @@ def check_resolution(slug):
         return None, []
 
 
-# ── Probe + paper bet phase ───────────────────────────────────────────────────────
+# ── Probe + bet phase ─────────────────────────────────────────────────────────────
 def run_probe_phase(ws: WSFeed, ptb: float, w_end: int, market: dict, clob_client=None):
-    """
-    Stream the last WAKE_UP_BEFORE seconds of a window, probe the order book at
-    each PROBE_MARKS countdown.
-
-    Signal logic:
-      - After each probe where BOTH sides have asks AND the dominant side's ask
-        meets CONFIDENCE_THRESHOLD, update last_clear_signal.
-      - Within the bet window (BET_WINDOW_START → BET_WINDOW_END seconds before
-        close), place the bet on the FIRST probe where the signal side still has
-        liquidity. Skip if the correct side has dried up.
-
-    Returns (probe_results, decided_side, entry_price, last_price).
-    """
     last_tick_ts       = None
     last_price         = ptb
     tick_count         = 0
@@ -248,8 +237,9 @@ def run_probe_phase(ws: WSFeed, ptb: float, w_end: int, market: dict, clob_clien
     signal_flip_at_mark    = None   # mark at which the signal flipped
 
     print(f"\n  Streaming last {WAKE_UP_BEFORE}s — probes at: {PROBE_MARKS}s before close")
-    print(f"  Bet window: T-{BET_WINDOW_START}s → T-{BET_WINDOW_END}s  "
-          f"| Confidence threshold: {CONFIDENCE_THRESHOLD:.0%}")
+    print(f"  Safety Rules:")
+    print(f"    - Min Price Move  : ${MIN_PRICE_MOVE:.2f} away from PTB (${ptb:,.2f})")
+    print(f"    - Max Contract Cap: ${MAX_PRICE_LIMIT:.2f}")
     print(f"  {'─'*72}")
 
     while True:
@@ -288,26 +278,40 @@ def run_probe_phase(ws: WSFeed, ptb: float, w_end: int, market: dict, clob_clien
                 up_str   = f"${up_ask:.4f}"   if up_ask   else "  NONE"
                 down_str = f"${down_ask:.4f}" if down_ask else "  NONE"
 
-                # ── Update last clear signal (both sides must be visible) ───
+                # ── Update last clear signal ────────────────────────────────
                 signal_tag = ""
+                
+                # Check current actual price side
+                current_move = last_price - ptb
+                current_dir = "UP" if current_move > 0 else "DOWN"
+                
                 if up_ask is not None and down_ask is not None:
                     dominant      = max(up_ask, down_ask)
                     new_signal    = "UP" if up_ask > down_ask else "DOWN"
+                    
                     if dominant >= CONFIDENCE_THRESHOLD:
-                        prev_clear_signal = last_clear_signal
-                        last_clear_signal = new_signal
-                        last_clear_up_ask   = up_ask
-                        last_clear_down_ask = down_ask
-                        last_clear_mark     = mark
-                        if prev_clear_signal and prev_clear_signal != new_signal:
-                            signal_flip_at_mark = mark
-                            signal_tag = f"  ⚡ SIGNAL FLIPPED → {new_signal}"
+                        # Clear stale signal if current actual price direction doesn't match the signal
+                        if new_signal != current_dir:
+                            last_clear_signal = None
+                            signal_tag = f"  ⚠️  signal conflict (signal={new_signal} vs price={current_dir}) - CLEARING"
                         else:
-                            signal_tag = f"  📶 signal={new_signal}"
+                            prev_clear_signal = last_clear_signal
+                            last_clear_signal = new_signal
+                            last_clear_up_ask   = up_ask
+                            last_clear_down_ask = down_ask
+                            last_clear_mark     = mark
+                            if prev_clear_signal and prev_clear_signal != new_signal:
+                                signal_flip_at_mark = mark
+                                signal_tag = f"  ⚡ SIGNAL FLIPPED → {new_signal}"
+                            else:
+                                signal_tag = f"  📶 signal={new_signal}"
                     else:
                         signal_tag = f"  ⚠️  low confidence ({dominant:.2f} < {CONFIDENCE_THRESHOLD:.2f})"
+                        # Clear signal if confidence dies
+                        last_clear_signal = None
                 elif up_ask is None and down_ask is None:
                     signal_tag = "  (both gone)"
+                    last_clear_signal = None
 
                 print(
                     f"\n  ► PROBE T-{mark:>2}s  {fmt(now)}  "
@@ -327,11 +331,24 @@ def run_probe_phase(ws: WSFeed, ptb: float, w_end: int, market: dict, clob_clien
                 in_bet_window = (BET_WINDOW_END <= mark <= BET_WINDOW_START)
                 if in_bet_window and decided_side is None:
                     if last_clear_signal is None:
-                        print(f"  ⏭️  T-{mark}s: No confident signal yet — waiting...")
+                        print(f"  ⏭️  T-{mark}s: No active/fresh signal — skipping...")
                     else:
+                        # Safety Rule 1: Verify current move size is sufficient
+                        abs_move = abs(last_price - ptb)
+                        if abs_move < MIN_PRICE_MOVE:
+                            print(f"  🚫 T-{mark}s: BTC move too small (${abs_move:.2f} < ${MIN_PRICE_MOVE:.2f}) — SKIP BET (close to boundary)")
+                            continue
+
+                        # Safety Rule 2: Check current price direction matches the signal (Freshness Check)
+                        current_dir = "UP" if (last_price > ptb) else "DOWN"
+                        if last_clear_signal != current_dir:
+                            print(f"  🚫 T-{mark}s: Signal ({last_clear_signal}) does not match price direction ({current_dir}) — SKIP BET (stale)")
+                            continue
+
                         # Check if the signal side still has liquidity right now
                         sig_ask = up_ask if last_clear_signal == "UP" else down_ask
                         if sig_ask is not None:
+
                             decided_side = last_clear_signal
                             entry_price  = sig_ask
                             results[-1]["bet_placed"] = True
@@ -342,7 +359,6 @@ def run_probe_phase(ws: WSFeed, ptb: float, w_end: int, market: dict, clob_clien
                                 if signal_flip_at_mark else ""
                             )
                             
-                            # If clob_client is provided, attempt live order placement
                             order_msg = "PAPER BET"
                             order_details = ""
                             if clob_client is not None:
@@ -360,6 +376,13 @@ def run_probe_phase(ws: WSFeed, ptb: float, w_end: int, market: dict, clob_clien
                                     )
                                     print(f"  ✅ Live order response: {resp}")
                                     order_details = f"\n  │  Order ID: {resp.get('orderID', 'n/a')}                                   │"
+                                
+                                    # Play alert beep
+                                    try:
+                                        sys.stdout.write('\a')
+                                        sys.stdout.flush()
+                                    except Exception:
+                                        pass
                                 except Exception as e:
                                     print(f"  ❌ Failed to place live order: {e}")
                                     order_msg = "LIVE BET (FAILED)"
@@ -375,7 +398,6 @@ def run_probe_phase(ws: WSFeed, ptb: float, w_end: int, market: dict, clob_clien
                                 + (f"\n  {flip_warn}" if flip_warn else "")
                             )
                         else:
-                            # Signal side has no liquidity — don't bet
                             print(
                                 f"\n  🚫 T-{mark}s: Signal={last_clear_signal} but {last_clear_signal} "
                                 f"side has no asks — SKIP BET (correct side dried up)"
@@ -383,7 +405,6 @@ def run_probe_phase(ws: WSFeed, ptb: float, w_end: int, market: dict, clob_clien
 
         time.sleep(0.1)
 
-    # ── Print signal history after loop ─────────────────────────────────────
     print(f"\n  📶 Final signal: {last_clear_signal}  "
           f"(last updated at T-{last_clear_mark}s  "
           f"UP=${last_clear_up_ask:.4f}  DOWN=${last_clear_down_ask:.4f})"
@@ -462,19 +483,9 @@ def print_summary(results, w_start, w_end, ptb, last_price, decided_side, entry_
 
 # ── Entry point ───────────────────────────────────────────────────────────────────
 def main():
-    now       = time.time()
-    w_s       = win_start(now)
-    w_e       = win_end(now)
-    secs_into = now - w_s
-    remaining = w_e - now
-
     mode_str = "LIVE BET" if POLYMARKET_LIVE_TRADING else "PAPER BET"
     print(f"\n{'═'*72}")
-    print(f"  PROBE CLOSE TIMING  +  {mode_str}")
-    print(f"  Current time   : {fmt(now)}")
-    print(f"  Current window : {fmt_win(w_s)}")
-    print(f"  Into window    : {int(secs_into)}s  |  Remaining: {int(remaining)}s")
-    print(f"  Stake          : ${STAKE_USD:.2f}  |  Bet window: T-{BET_WINDOW_START}s → T-{BET_WINDOW_END}s")
+    print(f"  CLOSE TO MARKET BOT (CONTINUOUS LOOP)  +  {mode_str}")
     print(f"{'═'*72}\n")
 
     clob_client = None
@@ -539,75 +550,103 @@ def main():
     btc_now, _ = tick
     print(f"  ✅ WS connected — BTC/USD: ${btc_now:,.2f}\n")
 
-    # ── Determine PTB and target window ──────────────────────────────────────────
-    if secs_into > 10:
-        # Mid-window: sleep until the NEXT boundary, then grab PTB
-        sleep_secs = w_e - time.time() + 0.5
-        print(f"  ⚠️  Mid-window ({int(secs_into)}s in, {int(remaining)}s remaining).")
-        print(f"  ⏳ Sleeping {int(sleep_secs)}s until next boundary ({fmt(w_e)})...\n")
-        time.sleep(max(0, sleep_secs))
-
-        now = time.time()
-        w_s = win_start(now)
-        w_e = w_s + WINDOW_SECS
-    # else: we're right at the boundary — use current w_s / w_e
-
-    slug = slug_for(w_s)
-    print(f"  📡 Window: {fmt_win(w_s)}")
-    print(f"  Waiting for first tick (Price to Beat)...")
-
-    ptb      = None
-    deadline = time.time() + 30
-    while time.time() < deadline:
-        result = ws.price_at_or_after(w_s)
-        if result:
-            ptb, ptb_ts_ms = result
-            lag = int(ptb_ts_ms / 1000 - w_s)
-            print(f"  📌 PRICE TO BEAT : ${ptb:,.2f}  (+{lag}s after boundary)\n")
-            break
-        time.sleep(0.1)
-
-    if ptb is None:
-        print("  ❌ Could not capture PTB in 30s — exiting.")
-        sys.exit(1)
-
-    # ── Resolve market tokens ─────────────────────────────────────────────────────
-    print(f"  🔍 Resolving market {slug}...")
-    market = None
-    for _ in range(20):
+    # ── Continuous Trading Loop ──────────────────────────────────────────────────
+    while True:
         try:
-            market = resolve_market(slug)
-            if market:
-                break
-        except Exception:
-            pass
-        time.sleep(2)
+            now       = time.time()
+            w_s       = win_start(now)
+            w_e       = win_end(now)
+            secs_into = now - w_s
+            remaining = w_e - now
 
-    if not market:
-        print("  ❌ Could not resolve market — exiting.")
-        sys.exit(1)
-    print(f"  📋 {market['title']}\n")
+            print(f"\n{'═'*72}")
+            print(f"  🆕 STARTING NEW CYCLE")
+            print(f"  Current time   : {fmt(now)}")
+            print(f"  Current window : {fmt_win(w_s)}")
+            print(f"  Into window    : {int(secs_into)}s  |  Remaining: {int(remaining)}s")
+            print(f"  Stake          : ${STAKE_USD:.2f}  |  Bet window: T-{BET_WINDOW_START}s → T-{BET_WINDOW_END}s")
+            print(f"{'═'*72}\n")
 
-    # ── Sleep silently until WAKE_UP_BEFORE seconds before close ─────────────────
-    wake_at   = w_e - WAKE_UP_BEFORE
-    wait_secs = wake_at - time.time()
-    if wait_secs > 0:
-        print(f"  ⏳ Sleeping {int(wait_secs)}s — will wake up at T-{WAKE_UP_BEFORE}s ({fmt(wake_at)})...\n")
-        time.sleep(wait_secs)
+            # ── Determine PTB and target window ──────────────────────────────────────
+            if secs_into > 10:
+                sleep_secs = w_e - time.time() + 0.5
+                print(f"  ⚠️  Mid-window ({int(secs_into)}s in, {int(remaining)}s remaining).")
+                print(f"  ⏳ Sleeping {int(sleep_secs)}s until next boundary ({fmt(w_e)})...\n")
+                time.sleep(max(0, sleep_secs))
 
-    # ── Run the probe + bet phase ─────────────────────────────────────────────────
-    results, decided_side, entry_price, last_price = run_probe_phase(
-        ws, ptb, w_e, market, clob_client=clob_client
-    )
+                now = time.time()
+                w_s = win_start(now)
+                w_e = w_s + WINDOW_SECS
 
-    # ── Window close summary ──────────────────────────────────────────────────────
-    print_summary(results, w_s, w_e, ptb, last_price, decided_side, entry_price)
+            slug = slug_for(w_s)
+            print(f"  📡 Window: {fmt_win(w_s)}")
+            print(f"  Waiting for first tick (Price to Beat)...")
 
-    # ── Settle ────────────────────────────────────────────────────────────────────
-    if decided_side and entry_price:
-        settle(slug, decided_side, entry_price)
-    else:
-        print("  ℹ️  No bet was placed — nothing to settle.")
+            ptb      = None
+            deadline = time.time() + 30
+            while time.time() < deadline:
+                result = ws.price_at_or_after(w_s)
+                if result:
+                    ptb, ptb_ts_ms = result
+                    lag = int(ptb_ts_ms / 1000 - w_s)
+                    print(f"  📌 PRICE TO BEAT : ${ptb:,.2f}  (+{lag}s after boundary)\n")
+                    break
+                time.sleep(0.1)
+
+            if ptb is None:
+                print("  ❌ Could not capture PTB in 30s — skipping this window.")
+                # Sleep until next window boundary
+                sleep_time = max(10, w_e - time.time())
+                time.sleep(sleep_time)
+                continue
+
+            # ── Resolve market tokens ─────────────────────────────────────────────────
+            print(f"  🔍 Resolving market {slug}...")
+            market = None
+            for _ in range(20):
+                try:
+                    market = resolve_market(slug)
+                    if market:
+                        break
+                except Exception:
+                    pass
+                time.sleep(2)
+
+            if not market:
+                print("  ❌ Could not resolve market — skipping this window.")
+                sleep_time = max(10, w_e - time.time())
+                time.sleep(sleep_time)
+                continue
+            print(f"  📋 {market['title']}\n")
+
+            # ── Sleep silently until WAKE_UP_BEFORE seconds before close ─────────────
+            wake_at   = w_e - WAKE_UP_BEFORE
+            wait_secs = wake_at - time.time()
+            if wait_secs > 0:
+                print(f"  ⏳ Sleeping {int(wait_secs)}s — will wake up at T-{WAKE_UP_BEFORE}s ({fmt(wake_at)})...\n")
+                time.sleep(wait_secs)
+
+            # ── Run the probe + bet phase ─────────────────────────────────────────────
+            results, decided_side, entry_price, last_price = run_probe_phase(
+                ws, ptb, w_e, market, clob_client=clob_client
+            )
+
+            # ── Window close summary ──────────────────────────────────────────────────
+            print_summary(results, w_s, w_e, ptb, last_price, decided_side, entry_price)
+
+            # ── Settle ────────────────────────────────────────────────────────────────
+            if decided_side and entry_price:
+                settle(slug, decided_side, entry_price)
+            else:
+                print("  ℹ️  No bet was placed — nothing to settle.")
+
+            # Small cooldown sleep to ensure we cross the boundary into the next window
+            time.sleep(2)
+
+        except Exception as e:
+            print(f"\n  ❌ Error in main loop: {e}")
+            print("  ⏳ Waiting 10 seconds before restarting cycle...\n")
+            time.sleep(10)
 
 
 if __name__ == "__main__":
@@ -615,3 +654,4 @@ if __name__ == "__main__":
         main()
     except KeyboardInterrupt:
         print("\n  Stopped by user.")
+

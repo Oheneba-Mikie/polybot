@@ -1,0 +1,280 @@
+/**
+ * console_alert_probe.js
+ * -----------------------------------------------------------------------
+ * PASTE-INTO-CONSOLE alert tool for Polymarket's BTC 5-min Up/Down market.
+ *
+ * WHAT THIS DOES:
+ *   - Connects to Polymarket's live Chainlink price WebSocket
+ *   - Tracks the current 5-min window, the Price-to-Beat (PTB), and ticks
+ *   - Polls the CLOB order book at fixed probe marks before close
+ *   - When a side becomes a confident, STABLE favourite, it throws up a
+ *     big on-page banner + sound telling YOU which side/price to click
+ *
+ * WHAT THIS DOES NOT DO:
+ *   - It does NOT click anything for you.
+ *   - It does NOT place any order, sign anything, or touch your wallet.
+ *   - It only reads public price data and shows you an alert.
+ *
+ * HOW TO USE:
+ *   1. Open the specific BTC Up/Down market on polymarket.com in a tab.
+ *   2. Open DevTools (F12 or Cmd+Opt+I) -> Console tab.
+ *   3. Paste this whole file in and hit Enter.
+ *   4. Watch the console + the floating banner in the top-right corner.
+ *   5. When it flashes "BET NOW", go click the real button on the page
+ *      yourself, at the real price shown live in Polymarket's own UI.
+ *
+ * To stop it: run  window.__probeStop()  in the console.
+ * -----------------------------------------------------------------------
+ */
+
+(function () {
+  // ── Config (mirrors the Python bot's settings) ─────────────────────────
+  const WINDOW_SECS          = 300;
+  const WAKE_UP_BEFORE       = 90;
+  const PROBE_MARKS          = [80, 70, 60, 50, 40, 35, 30, 25, 20, 18, 15, 12, 10, 8, 5, 3, 2, 1, 0];
+  const CONFIDENCE_THRESHOLD = 0.65;
+  const STABILITY_PROBES     = 2;      // how many consecutive confident probes before alerting
+  const MAX_PRICE_ALERT      = 0.95;   // don't shout "bet now" if price already this rich (thin margin)
+  const GAMMA_HOST           = "https://gamma-api.polymarket.com";
+  const CLOB_HOST            = "https://clob.polymarket.com";
+  const LIVE_WS_URL          = "wss://ws-live-data.polymarket.com/";
+
+  // ── Cleanup any previous instance ───────────────────────────────────────
+  if (window.__probeStop) window.__probeStop();
+
+  // ── UI: floating banner ─────────────────────────────────────────────────
+  const banner = document.createElement("div");
+  banner.style.cssText = `
+    position:fixed; top:16px; right:16px; z-index:999999;
+    width:340px; padding:14px 16px; border-radius:10px;
+    font:14px/1.4 -apple-system, Segoe UI, Roboto, sans-serif;
+    background:#111; color:#eee; box-shadow:0 6px 24px rgba(0,0,0,.4);
+    border:2px solid #333; white-space:pre-wrap;
+  `;
+  banner.id = "__probe_banner";
+  banner.textContent = "Probe alert tool loaded. Waiting for window boundary...";
+  document.body.appendChild(banner);
+
+  function setBanner(text, mode) {
+    banner.textContent = text;
+    const colors = {
+      idle:   ["#333", "#eee"],
+      watch:  ["#1d4ed8", "#fff"],
+      hot:    ["#b45309", "#fff"],
+      alert:  ["#dc2626", "#fff"],
+    };
+    const [bg, fg] = colors[mode] || colors.idle;
+    banner.style.background = bg;
+    banner.style.color = fg;
+  }
+
+  function beep(times = 1) {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      let t = ctx.currentTime;
+      for (let i = 0; i < times; i++) {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.frequency.value = 880;
+        osc.connect(gain); gain.connect(ctx.destination);
+        gain.gain.setValueAtTime(0.15, t);
+        osc.start(t); osc.stop(t + 0.15);
+        t += 0.25;
+      }
+    } catch (e) { /* audio may be blocked until user interacts with page once */ }
+  }
+
+  // ── Time helpers ─────────────────────────────────────────────────────────
+  const winStart = (ts = Date.now() / 1000) => Math.floor(ts / WINDOW_SECS) * WINDOW_SECS;
+  const winEnd   = (ts = Date.now() / 1000) => winStart(ts) + WINDOW_SECS;
+  const slugFor  = (ts) => `btc-updown-5m-${winStart(ts)}`;
+  const fmt = (ts) => new Date(ts * 1000).toLocaleTimeString();
+
+  // ── State ────────────────────────────────────────────────────────────────
+  let ptb = null;
+  let lastPrice = null;
+  let market = null;      // { up_id, down_id, title, slug }
+  let probesDone = new Set();
+  let lastClearSignal = null;
+  let stableCount = 0;
+  let alertedThisWindow = false;
+  let currentWindowStart = null;
+  let stopped = false;
+
+  // ── Resolve market token ids via Gamma API ──────────────────────────────
+  async function resolveMarket(slug) {
+    const res = await fetch(`${GAMMA_HOST}/events?slug=${slug}`);
+    const events = await res.json();
+    if (!events || !events.length) return null;
+    const mkt = events[0].markets[0];
+    const tokenIds = JSON.parse(mkt.clobTokenIds || "[]");
+    const outcomes = JSON.parse(mkt.outcomes || "[]").map((o) => String(o).toLowerCase());
+    let upId = null, downId = null;
+    outcomes.forEach((o, i) => {
+      if (o === "up" || o === "yes") upId = tokenIds[i];
+      else if (o === "down" || o === "no") downId = tokenIds[i];
+    });
+    if (!upId) upId = tokenIds[0];
+    if (!downId) downId = tokenIds[1];
+    return { slug, title: mkt.question || slug, up_id: upId, down_id: downId };
+  }
+
+  // ── Probe order book ─────────────────────────────────────────────────────
+  async function probeBook(tokenId) {
+    try {
+      const res = await fetch(`${CLOB_HOST}/book?token_id=${tokenId}`);
+      const data = await res.json();
+      const asks = data.asks || [];
+      if (!asks.length) return null;
+      return Math.min(...asks.map((a) => parseFloat(a.price)));
+    } catch (e) {
+      return null;
+    }
+  }
+
+  // ── Reset per-window state ───────────────────────────────────────────────
+  function resetForWindow(ws) {
+    currentWindowStart = ws;
+    probesDone = new Set();
+    lastClearSignal = null;
+    stableCount = 0;
+    alertedThisWindow = false;
+    ptb = null;
+    market = null;
+    setBanner(`New window ${fmt(ws)} → ${fmt(ws + WINDOW_SECS)}\nWaiting for Price-to-Beat...`, "idle");
+  }
+
+  // ── Main tick handler ─────────────────────────────────────────────────────
+  async function onTick(price, tsMs) {
+    if (stopped) return;
+    const now = tsMs / 1000;
+    const ws = winStart(now);
+
+    if (currentWindowStart !== ws) {
+      resetForWindow(ws);
+    }
+    if (ptb === null) {
+      ptb = price;
+      console.log(`%c📌 PRICE TO BEAT: $${ptb.toFixed(2)}`, "color:#3b82f6;font-weight:bold");
+      resolveMarket(slugFor(ws)).then((m) => {
+        market = m;
+        if (m) console.log(`📋 ${m.title}`);
+      });
+    }
+    lastPrice = price;
+
+    const remaining = winEnd(ws) - now;
+    const diff = price - ptb;
+    const arrow = diff > 0 ? "▲" : diff < 0 ? "▼" : "─";
+    console.log(
+      `tick  ${fmt(now)}  $${price.toFixed(2)}  ${arrow} ${diff.toFixed(2)}  ` +
+      `${Math.max(0, Math.round(remaining))}s left`
+    );
+
+    if (!market) return;
+    if (remaining > WAKE_UP_BEFORE) {
+      setBanner(`Window ${fmt(ws)}\nBTC $${price.toFixed(2)} (${arrow}${diff.toFixed(2)})\n` +
+                `Probing starts at T-${WAKE_UP_BEFORE}s`, "idle");
+      return;
+    }
+
+    // Fire probes at each mark
+    for (const mark of PROBE_MARKS) {
+      if (probesDone.has(mark)) continue;
+      if (remaining <= mark) {
+        probesDone.add(mark);
+        const [upAsk, downAsk] = await Promise.all([
+          probeBook(market.up_id),
+          probeBook(market.down_id),
+        ]);
+        const upStr = upAsk != null ? `$${upAsk.toFixed(4)}` : "NONE";
+        const downStr = downAsk != null ? `$${downAsk.toFixed(4)}` : "NONE";
+        console.log(`► PROBE T-${mark}s   UP=${upStr}  DOWN=${downStr}`);
+
+        if (upAsk != null && downAsk != null) {
+          const dominant = Math.max(upAsk, downAsk);
+          const newSignal = upAsk > downAsk ? "UP" : "DOWN";
+          if (dominant >= CONFIDENCE_THRESHOLD) {
+            if (newSignal === lastClearSignal) {
+              stableCount += 1;
+            } else {
+              lastClearSignal = newSignal;
+              stableCount = 1;
+            }
+            const askForSignal = newSignal === "UP" ? upAsk : downAsk;
+            const readyToAlert =
+              stableCount >= STABILITY_PROBES &&
+              askForSignal <= MAX_PRICE_ALERT &&
+              !alertedThisWindow;
+
+            if (readyToAlert) {
+              alertedThisWindow = true;
+              beep(3);
+              setBanner(
+                `🎯 BET NOW\n${newSignal} @ $${askForSignal.toFixed(4)}\n` +
+                `(stable ${stableCount}x, T-${mark}s)\n\n` +
+                `Go click ${newSignal} on the page.`,
+                "alert"
+              );
+              console.log(
+                `%c🎯 BET NOW: ${newSignal} @ $${askForSignal.toFixed(4)} — click it on the page`,
+                "color:#fff;background:#dc2626;font-weight:bold;padding:4px 8px;border-radius:4px"
+              );
+            } else if (!alertedThisWindow) {
+              setBanner(
+                `Window ${fmt(ws)}\nSignal: ${newSignal} (stable ${stableCount}x)\n` +
+                `UP=${upStr}  DOWN=${downStr}\nT-${mark}s`,
+                "watch"
+              );
+            }
+          }
+        }
+      }
+    }
+
+    if (remaining <= 0 && !probesDone.has(0)) {
+      // window essentially over
+      setBanner(`Window ${fmt(ws)} closing...`, "idle");
+    }
+  }
+
+  // ── WebSocket connection ─────────────────────────────────────────────────
+  let ws;
+  function connect() {
+    ws = new WebSocket(LIVE_WS_URL);
+    ws.onopen = () => {
+      ws.send(JSON.stringify({
+        action: "subscribe",
+        subscriptions: [{ topic: "crypto_prices_chainlink", type: "update" }],
+      }));
+      console.log("%c✅ Connected to live price feed", "color:#16a34a");
+    };
+    ws.onmessage = (evt) => {
+      let msg;
+      try { msg = JSON.parse(evt.data); } catch { return; }
+      if (msg.topic !== "crypto_prices_chainlink") return;
+      const p = msg.payload || {};
+      if (p.symbol !== "btc/usd") return;
+      onTick(p.value, p.timestamp);
+    };
+    ws.onclose = () => {
+      if (!stopped) {
+        console.warn("WS closed — reconnecting in 2s...");
+        setTimeout(connect, 2000);
+      }
+    };
+    ws.onerror = (e) => console.error("WS error", e);
+  }
+  connect();
+
+  // ── Stop function ────────────────────────────────────────────────────────
+  window.__probeStop = function () {
+    stopped = true;
+    if (ws) ws.close();
+    const el = document.getElementById("__probe_banner");
+    if (el) el.remove();
+    console.log("Probe alert tool stopped.");
+  };
+
+  console.log("%cProbe alert tool running. Call window.__probeStop() to stop.", "color:#3b82f6;font-weight:bold");
+})();
