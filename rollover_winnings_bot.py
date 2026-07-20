@@ -156,7 +156,7 @@ class WSFeed:
     def latest(self):
         self.check_staleness_and_reconnect()
         with self._lock:
-            return (self._price, self._ts_ms) if self._price is not None else None
+            return (self._price, self._ts_ms) if (self._price is not None and self._ts_ms is not None) else None
 
     def price_at_or_after(self, ts_sec):
         self.check_staleness_and_reconnect()
@@ -174,6 +174,7 @@ class WSFeed:
                 if lag > 15.0:
                     print(f"\n  ⚠️ WS feed is stale (lag={lag:.1f}s) — forcing reconnect...\n")
                     self._ts_ms = None  # Reset to prevent double triggers
+                    self._price = None
                     if self._ws_app:
                         try:
                             self._ws_app.close()
