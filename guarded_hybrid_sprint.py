@@ -1,35 +1,6 @@
 #!/usr/bin/env python3
 """
-five_mins_hybrid_sprint.py — Advanced Hybrid Polymarket Bot
-
-================================================================================
-HOW THIS HYBRID BOT OPERATES:
-================================================================================
-Phase 1: The Sprint (Wallet < $10.00)
-- The bot stakes 100% of your wallet balance (minus 5c fee buffer) on a single streak.
-- It uses unlimited compounding (no win cap) to sprint to $10.00 as fast as possible.
-- If a trade loses, it resets the starting stake to exactly $1.00.
-
-Phase 2: Safe Compounding (Wallet >= $10.00)
-- The bot automatically splits your balance into two concurrent streaks (50% each).
-- Streak 1 (All-Rules) and Streak 2 (Close-Only) run concurrently in the same window.
-- Both streaks have a 4-Win Cap (Take Profit) to bank gains and reset safely.
-- If a streak completes or loses, it resets to the new 50% wallet split.
-
-================================================================================
-HOW TO RUN THIS BOT ON ANOTHER COMPUTER OR WITH A NEW WALLET:
-================================================================================
-Step 1: Install Python (version 3.10 or higher) on the computer.
-Step 2: Copy the folder containing this bot onto the computer.
-Step 3: Open your Terminal / Command Prompt, navigate to the folder, and run:
-        pip install -r requirements.txt
-Step 4: Run the bot:
-        python five_mins_hybrid_sprint.py
-Step 5: The bot will detect that it is a new setup and will ask you for:
-        - Your Private Key (starts with 0x)
-        It will automatically resolve your Polymarket proxy address and derive your API credentials.
-Step 6: Press Enter to accept the balance, and the bot will handle the rest!
-================================================================================
+guarded_hybrid_sprint.py — Advanced Hybrid Polymarket Bot with Max Price Guard and State Persistence
 """
 
 import json
@@ -41,6 +12,81 @@ import datetime
 import threading
 import requests
 import websocket
+from dotenv import load_dotenv
+
+# ── Config ──────────────────────────────────────────────────────────────────────
+LIVE_WS_URL   = "wss://ws-live-data.polymarket.com/"
+GAMMA_HOST    = "https://gamma-api.polymarket.com"
+CLOB_HOST     = "https://clob.polymarket.com"
+WINDOW_SECS   = 300          # 5-minute window
+WAKE_UP_BEFORE      = 90    # seconds before close to start streaming/probing
+STREAK_WIN_CAP      = 4     # Take Profit: Reset streak after 4 consecutive wins (Phase 2 Only)
+
+# Bet window: place bet at the FIRST probe within this range
+BET_WINDOW_START    = 80    # earliest we'll check (T-80s)
+BET_WINDOW_END      = 5     # latest we'll bet  (T-5s)
+
+# Strategy Rules:
+CONFIDENCE_THRESHOLD = 0.65  # dominant side must be priced at $0.65+
+MAX_EARLY_PRICE      = 0.85  # Max price allowed for early trend trades (T-80s to T-15s)
+
+# Order-book probe marks (seconds before close)
+PROBE_MARKS = [80, 70, 60, 50, 40, 35, 30, 25, 20, 18, 15, 12, 10, 8, 5, 3, 2, 1, 0]
+
+SETTLE_POLL_INTERVAL = 5     # seconds between resolution checks
+SETTLE_MAX_ATTEMPTS  = 60    # give up after 5 minutes
+
+STATE_FILE = "sprint_state.json"
+
+# ── Global State ────────────────────────────────────────────────────────────────
+sprint_stake = 1.00
+sprint_wins = 0
+
+streak_1_stake = 1.00
+streak_1_wins = 0
+streak_2_stake = 1.00
+streak_2_wins = 0
+
+active_settle_thread = None
+
+# ── State Persistence Helpers ───────────────────────────────────────────────────
+def save_state():
+    try:
+        state = {
+            "sprint_stake": sprint_stake,
+            "sprint_wins": sprint_wins,
+            "streak_1_stake": streak_1_stake,
+            "streak_1_wins": streak_1_wins,
+            "streak_2_stake": streak_2_stake,
+            "streak_2_wins": streak_2_wins
+        }
+        with open(STATE_FILE, "w") as f:
+            json.dump(state, f, indent=4)
+    except Exception as e:
+        print(f"  ⚠️ Error saving state file: {e}")
+
+def load_state():
+    global sprint_stake, sprint_wins, streak_1_stake, streak_1_wins, streak_2_stake, streak_2_wins
+    if os.path.exists(STATE_FILE):
+        try:
+            with open(STATE_FILE, "r") as f:
+                state = json.load(f)
+            sprint_stake = state.get("sprint_stake", 1.00)
+            sprint_wins = state.get("sprint_wins", 0)
+            streak_1_stake = state.get("streak_1_stake", 1.00)
+            streak_1_wins = state.get("streak_1_wins", 0)
+            streak_2_stake = state.get("streak_2_stake", 1.00)
+            streak_2_wins = state.get("streak_2_wins", 0)
+            print("\n" + "═"*72)
+            print(f"  📂 Loaded saved state from {STATE_FILE}:")
+            print(f"    - Sprint Stake : ${sprint_stake:.2f} (Wins: {sprint_wins})")
+            print(f"    - Streak 1 (All-Rules) : ${streak_1_stake:.2f} ({streak_1_wins}/{STREAK_WIN_CAP} Wins)")
+            print(f"    - Streak 2 (Close-Only): ${streak_2_stake:.2f} ({streak_2_wins}/{STREAK_WIN_CAP} Wins)")
+            print("═"*72 + "\n")
+            return True
+        except Exception as e:
+            print(f"  ⚠️ Error loading state file: {e}")
+    return False
 
 # ── Onboarding / Setup Assistant ────────────────────────────────────────────────
 def setup_dotenv_if_missing():
@@ -132,10 +178,7 @@ def setup_dotenv_if_missing():
         print("  Ready to launch the bot...")
         print("═"*72 + "\n")
 
-# Run onboarding before anything else
 setup_dotenv_if_missing()
-
-from dotenv import load_dotenv
 load_dotenv()
 
 POLYMARKET_LIVE_TRADING = os.getenv("POLYMARKET_LIVE_TRADING", "False").lower() in ("true", "1", "yes")
@@ -144,43 +187,6 @@ POLYMARKET_API_KEY = os.getenv("POLYMARKET_API_KEY")
 POLYMARKET_API_SECRET = os.getenv("POLYMARKET_API_SECRET")
 POLYMARKET_API_PASSPHRASE = os.getenv("POLYMARKET_API_PASSPHRASE")
 POLYMARKET_PRIVATE_KEY = os.getenv("POLYMARKET_PRIVATE_KEY")
-
-# ── Config ──────────────────────────────────────────────────────────────────────
-LIVE_WS_URL   = "wss://ws-live-data.polymarket.com/"
-GAMMA_HOST    = "https://gamma-api.polymarket.com"
-CLOB_HOST     = "https://clob.polymarket.com"
-WINDOW_SECS   = 300          # 5-minute window
-
-WAKE_UP_BEFORE      = 90    # seconds before close to start streaming/probing
-STREAK_WIN_CAP      = 4     # Take Profit: Reset streak after 4 consecutive wins (Phase 2 Only)
-
-# Bet window: place bet at the FIRST probe within this range
-BET_WINDOW_START    = 80    # earliest we'll check (T-80s)
-BET_WINDOW_END      = 5     # latest we'll bet  (T-5s)
-
-# Strategy Rules:
-CONFIDENCE_THRESHOLD = 0.65  # dominant side must be priced at $0.65+
-
-# Order-book probe marks (seconds before close)
-PROBE_MARKS = [80, 70, 60, 50, 40, 35, 30, 25, 20, 18, 15, 12, 10, 8, 5, 3, 2, 1, 0]
-
-SETTLE_POLL_INTERVAL = 5     # seconds between resolution checks
-SETTLE_MAX_ATTEMPTS  = 60    # give up after 5 minutes
-
-
-# ── Global State ────────────────────────────────────────────────────────────────
-# Sprint State (Phase 1)
-sprint_stake = 1.00
-sprint_wins = 0
-
-# Dual Streak State (Phase 2)
-streak_1_stake = 1.00
-streak_1_wins = 0
-streak_2_stake = 1.00
-streak_2_wins = 0
-
-active_settle_thread = None
-
 
 # ── SSL + WS headers ────────────────────────────────────────────────────────────
 def make_ssl_ctx():
@@ -199,7 +205,6 @@ WS_HEADERS = {
     ),
 }
 
-
 # ── Time helpers ─────────────────────────────────────────────────────────────────
 def win_start(ts=None):
     t = ts if ts is not None else time.time()
@@ -216,7 +221,6 @@ def fmt(ts):
 
 def fmt_win(start_ts):
     return f"{fmt(start_ts)} → {fmt(start_ts + WINDOW_SECS)}"
-
 
 # ── WS feed ───────────────────────────────────────────────────────────────────────
 class WSFeed:
@@ -297,14 +301,13 @@ class WSFeed:
                 lag = time.time() - (self._ts_ms / 1000.0)
                 if lag > 15.0:
                     print(f"\n  ⚠️ WS feed is stale (lag={lag:.1f}s) — forcing reconnect...\n")
-                    self._ts_ms = None  # Reset to prevent double triggers
+                    self._ts_ms = None
                     self._price = None
                     if self._ws_app:
                         try:
                             self._ws_app.close()
                         except Exception:
                             pass
-
 
 # ── Market / resolution / balance API ─────────────────────────────────────────────
 def resolve_market(slug, timeout=10):
@@ -329,7 +332,6 @@ def resolve_market(slug, timeout=10):
         "down_id": down_id,
     }
 
-
 def probe_book(token_id, timeout=2):
     try:
         r = requests.get(f"{CLOB_HOST}/book", params={"token_id": token_id}, timeout=timeout)
@@ -341,7 +343,6 @@ def probe_book(token_id, timeout=2):
         return best, len(asks)
     except Exception:
         return None, 0
-
 
 def check_resolution(slug):
     try:
@@ -358,7 +359,6 @@ def check_resolution(slug):
     except Exception:
         return None, []
 
-
 def get_live_balance(clob_client):
     try:
         from py_clob_client_v2.clob_types import BalanceAllowanceParams, AssetType
@@ -369,48 +369,6 @@ def get_live_balance(clob_client):
     except Exception as e:
         print(f"  ⚠️ Error fetching balance: {e}")
         return None
-
-
-def reconstruct_sprint_on_startup(clob_client, default_stake):
-    try:
-        from py_clob_client_v2.clob_types import TradeParams
-        params = TradeParams(maker_address=os.getenv("POLYMARKET_ADDRESS"))
-        trades = clob_client.get_trades(params)
-        if not trades:
-            return default_stake, 0
-        
-        last_trade = trades[0]
-        match_time = int(float(last_trade.get("match_time", 0)))
-        w_s = (match_time // 300) * 300
-        slug = f"btc-updown-5m-{w_s}"
-        
-        up_won, _ = check_resolution(slug)
-        if up_won is None:
-            cost = float(last_trade.get("size", 0)) * float(last_trade.get("price", 0))
-            return max(1.00, round(cost, 2)), 1
-            
-        outcome_bought = last_trade.get("outcome", "").upper()
-        winning_outcome = "UP" if up_won else "DOWN"
-        if outcome_bought == winning_outcome:
-            streak = 1
-            last_size = float(last_trade.get("size", 0))
-            for t in trades[1:]:
-                t_time = int(float(t.get("match_time", 0)))
-                t_w_s = (t_time // 300) * 300
-                t_up_won, _ = check_resolution(f"btc-updown-5m-{t_w_s}")
-                if t_up_won is not None:
-                    if t.get("outcome", "").upper() == ("UP" if t_up_won else "DOWN"):
-                        streak += 1
-                    else:
-                        break
-                else:
-                    break
-            return round(last_size, 2), streak
-        else:
-            return default_stake, 0
-    except Exception:
-        return default_stake, 0
-
 
 # ── Probe + bet phase ─────────────────────────────────────────────────────────────
 def run_probe_phase(ws: WSFeed, ptb: float, w_end: int, market: dict, clob_client=None, phase=1):
@@ -428,7 +386,6 @@ def run_probe_phase(ws: WSFeed, ptb: float, w_end: int, market: dict, clob_clien
     s2_decided_side    = None
     s2_entry_price     = None
 
-    # ── Signal tracking state ────────────────────────────────────────────────
     last_clear_signal      = None
     last_clear_up_ask      = None
     last_clear_down_ask    = None
@@ -450,7 +407,6 @@ def run_probe_phase(ws: WSFeed, ptb: float, w_end: int, market: dict, clob_clien
         if remaining <= -3:
             break
 
-        # New tick?
         ws_data = ws.latest()
         if ws_data:
             price, ts_ms = ws_data
@@ -466,7 +422,6 @@ def run_probe_phase(ws: WSFeed, ptb: float, w_end: int, market: dict, clob_clien
                     f"ptb=${ptb:,.2f}  {int(remaining):>3}s left"
                 )
 
-        # Fire probes at each countdown mark
         for mark in PROBE_MARKS:
             if mark in probes_done:
                 continue
@@ -479,7 +434,6 @@ def run_probe_phase(ws: WSFeed, ptb: float, w_end: int, market: dict, clob_clien
                 up_str   = f"${up_ask:.4f}"   if up_ask   else "  NONE"
                 down_str = f"${down_ask:.4f}" if down_ask else "  NONE"
 
-                # Update signal
                 signal_tag = ""
                 current_move = last_price - ptb
                 current_dir = "UP" if current_move > 0 else "DOWN"
@@ -519,22 +473,25 @@ def run_probe_phase(ws: WSFeed, ptb: float, w_end: int, market: dict, clob_clien
 
                 in_bet_window = (BET_WINDOW_END <= mark <= BET_WINDOW_START)
                 if in_bet_window:
-                    # Skip bet if the whole number has not changed from PTB (decimal-only movement)
                     if int(last_price) == int(ptb):
                         continue
                         
-                    # ── Phase 1: Sprint Mode (100% Wallet) ──
+                    # ── Phase 1: Sprint Mode ──
                     if phase == 1:
                         if s1_decided_side is None and last_clear_signal is not None:
-                            if mark >= 70:      required_move = 40.0
+                            is_early = (mark >= 15)
+                            if mark >= 70:         required_move = 40.0
                             elif 35 <= mark <= 60: required_move = 20.0
                             elif 15 <= mark <= 30: required_move = 15.0
-                            elif 5 <= mark <= 12:  required_move = 15.0
                             else:                  required_move = 15.0
 
                             if abs(last_price - ptb) >= required_move and last_clear_signal == current_dir:
                                 sig_ask = up_ask if last_clear_signal == "UP" else down_ask
                                 if sig_ask is not None:
+                                    if is_early and sig_ask > MAX_EARLY_PRICE:
+                                        print(f"  ⚠️  [SPRINT] Skipping early bet: contract price is too expensive (${sig_ask:.4f} > ${MAX_EARLY_PRICE:.2f}).")
+                                        continue
+
                                     s1_decided_side = last_clear_signal
                                     s1_entry_price  = sig_ask
                                     results[-1]["bet_placed"] = True
@@ -570,19 +527,23 @@ def run_probe_phase(ws: WSFeed, ptb: float, w_end: int, market: dict, clob_clien
                                             f"\n  └──────────────────────────────────────────────────────────┘"
                                         )
 
-                    # ── Phase 2: Safe Compounding Mode (50/50 Split) ──
+                    # ── Phase 2: Safe Compounding Mode ──
                     else:
                         # Streak 1 (All-Rules)
                         if s1_decided_side is None and last_clear_signal is not None:
-                            if mark >= 70:      required_move = 40.0
+                            is_early = (mark >= 15)
+                            if mark >= 70:         required_move = 40.0
                             elif 35 <= mark <= 60: required_move = 20.0
                             elif 15 <= mark <= 30: required_move = 15.0
-                            elif 5 <= mark <= 12:  required_move = 15.0
                             else:                  required_move = 15.0
 
                             if abs(last_price - ptb) >= required_move and last_clear_signal == current_dir:
                                 sig_ask = up_ask if last_clear_signal == "UP" else down_ask
                                 if sig_ask is not None:
+                                    if is_early and sig_ask > MAX_EARLY_PRICE:
+                                        print(f"  ⚠️  [S1] Skipping early bet: contract price is too expensive (${sig_ask:.4f} > ${MAX_EARLY_PRICE:.2f}).")
+                                        continue
+
                                     s1_decided_side = last_clear_signal
                                     s1_entry_price  = sig_ask
                                     results[-1]["bet_placed"] = True
@@ -663,7 +624,6 @@ def run_probe_phase(ws: WSFeed, ptb: float, w_end: int, market: dict, clob_clien
 
     return results, s1_decided_side, s1_entry_price, s2_decided_side, s2_entry_price, last_price
 
-
 # ── Settlement ────────────────────────────────────────────────────────────────────
 def settle(slug, decided_side, entry_price, stake_usd, name="S1"):
     print(f"\n  ⏳ [{name}] Polling for market resolution ({slug})...")
@@ -684,7 +644,6 @@ def settle(slug, decided_side, entry_price, stake_usd, name="S1"):
             return won
     print(f"  ⚠️  [{name}] Market did not resolve within the wait period.")
     return None
-
 
 # ── Summary table ─────────────────────────────────────────────────────────────────
 def print_summary(results, w_start, w_end, ptb, last_price, s1_side, s1_price, s2_side, s2_price):
@@ -712,7 +671,6 @@ def print_summary(results, w_start, w_end, ptb, last_price, s1_side, s1_price, s
         print(f"  T-{r['mark']:>4}s  {fmt(r['ts']):>8}  {up_str:>8}  {down_str:>9}  {status}{bet_tag}")
 
     print(f"  {'═'*72}\n")
-
 
 # ── Entry point ───────────────────────────────────────────────────────────────────
 def main():
@@ -770,39 +728,41 @@ def main():
     btc_now, _ = tick
     print(f"  ✅ WS connected — BTC/USD: ${btc_now:,.2f}\n")
 
-    # ── Initial Balance check & Onboarding stakes ──────────────────────────────────
-    if POLYMARKET_LIVE_TRADING and clob_client is not None:
-        print("  🔄 Querying live wallet balance...")
-        bal = get_live_balance(clob_client)
-        if bal is not None:
-            print(f"  💰 Live Balance: ${bal:.2f} pUSD")
-            default_start = max(1.00, round(bal - 0.05, 2))
-        else:
-            default_start = 5.00
-            bal = 5.05
-            print("  ⚠️ Could not fetch balance. Defaulting starting stake reference to $5.00 pUSD")
-            
-        try:
-            user_in = input(f"  👉 Enter starting stake [Default ${default_start:.2f}]: ").strip()
-            starting_stake = float(user_in) if user_in else default_start
-        except ValueError:
-            starting_stake = default_start
+    # Load State from File or Fallback to Setup
+    state_loaded = load_state()
 
-        # Reconstruct state
-        if bal < 10.00:
-            # Phase 1: Sprint Mode
-            print("  🏃 Wallet < $10.00: Running in Phase 1 (Sprint 100% Wallet)")
-            sprint_stake, sprint_wins = reconstruct_sprint_on_startup(clob_client, starting_stake)
+    # If no state file exists, run onboarding setup
+    if not state_loaded:
+        if POLYMARKET_LIVE_TRADING and clob_client is not None:
+            print("  🔄 Querying live wallet balance...")
+            bal = get_live_balance(clob_client)
+            if bal is not None:
+                print(f"  💰 Live Balance: ${bal:.2f} pUSD")
+                default_start = max(1.00, round(bal - 0.05, 2))
+            else:
+                default_start = 5.00
+                bal = 5.05
+                print("  ⚠️ Could not fetch balance. Defaulting starting stake reference to $5.00 pUSD")
+                
+            try:
+                user_in = input(f"  👉 Enter starting stake [Default ${default_start:.2f}]: ").strip()
+                starting_stake = float(user_in) if user_in else default_start
+            except ValueError:
+                starting_stake = default_start
+
+            if bal < 10.00:
+                print("  🏃 Wallet < $10.00: Running in Phase 1 (Sprint 100% Wallet)")
+                sprint_stake = starting_stake
+            else:
+                print("  🛡️ Wallet >= $10.00: Running in Phase 2 (Safe Dual 50/50 Split)")
+                split_stake = max(1.00, round((bal - 0.10) / 2.0, 2))
+                streak_1_stake = split_stake
+                streak_2_stake = split_stake
         else:
-            # Phase 2: Dual Streak mode
-            print("  🛡️ Wallet >= $10.00: Running in Phase 2 (Safe Dual 50/50 Split)")
-            split_stake = max(1.00, round((bal - 0.10) / 2.0, 2))
-            streak_1_stake = split_stake
-            streak_2_stake = split_stake
-    else:
-        starting_stake = 5.00
-        sprint_stake = 5.00
-        bal = 5.00
+            sprint_stake = 5.00
+            streak_1_stake = 5.00
+            streak_2_stake = 5.00
+        save_state()
 
     # ── Continuous Trading Loop ──────────────────────────────────────────────────
     while True:
@@ -814,7 +774,11 @@ def main():
             remaining = w_e - now
 
             if POLYMARKET_LIVE_TRADING and clob_client is not None:
-                bal = get_live_balance(clob_client) or bal
+                local_bal = get_live_balance(clob_client)
+                if local_bal is not None:
+                    bal = local_bal
+                else:
+                    bal = (sprint_stake + 0.05) if sprint_stake > 1.00 else 9.99
 
             phase = 1 if bal < 10.00 else 2
 
@@ -886,38 +850,32 @@ def main():
                 print(f"  ⏳ Sleeping {int(wait_secs)}s — will wake up at T-{WAKE_UP_BEFORE}s ({fmt(wake_at)})...\n")
                 time.sleep(wait_secs)
 
-            # Re-query balance and update stakes right before trading (T-90s)
             if POLYMARKET_LIVE_TRADING and clob_client is not None:
                 new_bal = get_live_balance(clob_client)
                 if new_bal is not None:
                     bal = new_bal
                     phase = 1 if bal < 10.00 else 2
                     if phase == 1:
-                        # Sprint Mode always stakes 100% of the active wallet balance
                         sprint_stake = max(1.00, round(bal - 0.05, 2))
                     else:
-                        # Safe Compounding Mode updates stakes for streaks starting fresh (0 wins)
                         split_stake = max(1.00, round((bal - 0.10) / 2.0, 2))
                         if streak_1_wins == 0:
                             streak_1_stake = split_stake
                         if streak_2_wins == 0:
                             streak_2_stake = split_stake
+                    save_state()
 
-            # ── Run the probe + bet phase ─────────────────────────────────────────────
             results, s1_side, s1_price, s2_side, s2_price, last_price = run_probe_phase(
                 ws, ptb, w_e, market, clob_client=clob_client, phase=phase
             )
 
-            # ── Window close summary ──────────────────────────────────────────────────
             if phase == 1:
                 print_summary(results, w_s, w_e, ptb, last_price, s1_side, s1_price, None, None)
             else:
                 print_summary(results, w_s, w_e, ptb, last_price, s1_side, s1_price, s2_side, s2_price)
 
-            # ── Settlement calculations ────────────────────────────────────────
             actual_direction = "UP" if (last_price > ptb) else "DOWN"
 
-            # Phase 1: Sprint Settlement
             if phase == 1:
                 if s1_side and s1_price:
                     won = (s1_side == actual_direction)
@@ -931,11 +889,10 @@ def main():
                         sprint_stake = 1.00
                         sprint_wins = 0
 
+                    save_state()
                     threading.Thread(target=settle, args=(slug, s1_side, s1_price, s_old, "SPRINT"), daemon=True).start()
 
-            # Phase 2: Dual Streak Settlement
             else:
-                # Settle S1
                 s1_old = streak_1_stake
                 if s1_side and s1_price:
                     s1_won = (s1_side == actual_direction)
@@ -954,9 +911,9 @@ def main():
                         streak_1_stake = max(1.00, round((bal - 0.10) / 2.0, 2)) if bal else 1.00
                         streak_1_wins = 0
                     
+                    save_state()
                     threading.Thread(target=settle, args=(slug, s1_side, s1_price, s1_old, "S1"), daemon=True).start()
 
-                # Settle S2
                 s2_old = streak_2_stake
                 if s2_side and s2_price:
                     s2_won = (s2_side == actual_direction)
@@ -975,6 +932,7 @@ def main():
                         streak_2_stake = max(1.00, round((bal - 0.10) / 2.0, 2)) if bal else 1.00
                         streak_2_wins = 0
                     
+                    save_state()
                     threading.Thread(target=settle, args=(slug, s2_side, s2_price, s2_old, "S2"), daemon=True).start()
 
             time.sleep(2)
@@ -984,9 +942,9 @@ def main():
             print("  ⏳ Waiting 10 seconds before restarting cycle...\n")
             time.sleep(10)
 
-
 if __name__ == "__main__":
     try:
         main()
     except KeyboardInterrupt:
-        print("\n  Stopped by user.")
+        print("\n  👋 Bot stopped by user. Exiting.")
+        sys.exit(0)

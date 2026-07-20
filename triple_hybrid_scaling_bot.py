@@ -1,20 +1,22 @@
 #!/usr/bin/env python3
 """
-five_mins_hybrid_sprint.py — Advanced Hybrid Polymarket Bot
+triple_hybrid_scaling_bot.py — Triple Streak Hybrid Compounding Bot
 
 ================================================================================
-HOW THIS HYBRID BOT OPERATES:
+HOW THIS BOT OPERATES:
 ================================================================================
-Phase 1: The Sprint (Wallet < $10.00)
-- The bot stakes 100% of your wallet balance (minus 5c fee buffer) on a single streak.
-- It uses unlimited compounding (no win cap) to sprint to $10.00 as fast as possible.
-- If a trade loses, it resets the starting stake to exactly $1.00.
-
-Phase 2: Safe Compounding (Wallet >= $10.00)
-- The bot automatically splits your balance into two concurrent streaks (50% each).
-- Streak 1 (All-Rules) and Streak 2 (Close-Only) run concurrently in the same window.
-- Both streaks have a 4-Win Cap (Take Profit) to bank gains and reset safely.
-- If a streak completes or loses, it resets to the new 50% wallet split.
+- Splits your wallet balance into 3 equal parts (minus a 5c fee buffer for each).
+- Runs 3 concurrent compounding streaks in parallel:
+  * Streak 1 (Trend-Catcher): Checks early from T-80s to T-15s. Requires a massive 
+    $40.00+ move (Mega-Move) to buy early trends when liquidity is high.
+  * Streak 2 (Close-Only): Checks late from T-12s to T-5s. Requires a $5.00+ move
+    to capture safe late-stage closes.
+  * Streak 3 (Close-Only): Checks late from T-12s to T-5s. Requires a $5.00+ move
+    to capture safe late-stage closes.
+- Safe Decimal Guard: The bot ignores decimal-only changes; it will not buy if the
+  whole dollar amount of BTC has not changed from the Price to Beat.
+- Each streak has a 4-Win Cap (Take Profit) to bank profits and reset.
+- On win completion or loss, resets to 1/3 of the current wallet balance.
 
 ================================================================================
 HOW TO RUN THIS BOT ON ANOTHER COMPUTER OR WITH A NEW WALLET:
@@ -24,7 +26,7 @@ Step 2: Copy the folder containing this bot onto the computer.
 Step 3: Open your Terminal / Command Prompt, navigate to the folder, and run:
         pip install -r requirements.txt
 Step 4: Run the bot:
-        python five_mins_hybrid_sprint.py
+        python triple_hybrid_scaling_bot.py
 Step 5: The bot will detect that it is a new setup and will ask you for:
         - Your Private Key (starts with 0x)
         It will automatically resolve your Polymarket proxy address and derive your API credentials.
@@ -152,11 +154,11 @@ CLOB_HOST     = "https://clob.polymarket.com"
 WINDOW_SECS   = 300          # 5-minute window
 
 WAKE_UP_BEFORE      = 90    # seconds before close to start streaming/probing
-STREAK_WIN_CAP      = 4     # Take Profit: Reset streak after 4 consecutive wins (Phase 2 Only)
+STREAK_WIN_CAP      = 4     # Take Profit: Reset streak after 4 consecutive wins
 
-# Bet window: place bet at the FIRST probe within this range
-BET_WINDOW_START    = 80    # earliest we'll check (T-80s)
-BET_WINDOW_END      = 5     # latest we'll bet  (T-5s)
+# Windows
+BET_WINDOW_START    = 80    # earliest check for Streak 1 (T-80s)
+BET_WINDOW_END      = 5     # latest check for all (T-5s)
 
 # Strategy Rules:
 CONFIDENCE_THRESHOLD = 0.65  # dominant side must be priced at $0.65+
@@ -169,17 +171,15 @@ SETTLE_MAX_ATTEMPTS  = 60    # give up after 5 minutes
 
 
 # ── Global State ────────────────────────────────────────────────────────────────
-# Sprint State (Phase 1)
-sprint_stake = 1.00
-sprint_wins = 0
-
-# Dual Streak State (Phase 2)
+# 3 Streaks
 streak_1_stake = 1.00
 streak_1_wins = 0
+
 streak_2_stake = 1.00
 streak_2_wins = 0
 
-active_settle_thread = None
+streak_3_stake = 1.00
+streak_3_wins = 0
 
 
 # ── SSL + WS headers ────────────────────────────────────────────────────────────
@@ -297,7 +297,7 @@ class WSFeed:
                 lag = time.time() - (self._ts_ms / 1000.0)
                 if lag > 15.0:
                     print(f"\n  ⚠️ WS feed is stale (lag={lag:.1f}s) — forcing reconnect...\n")
-                    self._ts_ms = None  # Reset to prevent double triggers
+                    self._ts_ms = None
                     self._price = None
                     if self._ws_app:
                         try:
@@ -371,50 +371,9 @@ def get_live_balance(clob_client):
         return None
 
 
-def reconstruct_sprint_on_startup(clob_client, default_stake):
-    try:
-        from py_clob_client_v2.clob_types import TradeParams
-        params = TradeParams(maker_address=os.getenv("POLYMARKET_ADDRESS"))
-        trades = clob_client.get_trades(params)
-        if not trades:
-            return default_stake, 0
-        
-        last_trade = trades[0]
-        match_time = int(float(last_trade.get("match_time", 0)))
-        w_s = (match_time // 300) * 300
-        slug = f"btc-updown-5m-{w_s}"
-        
-        up_won, _ = check_resolution(slug)
-        if up_won is None:
-            cost = float(last_trade.get("size", 0)) * float(last_trade.get("price", 0))
-            return max(1.00, round(cost, 2)), 1
-            
-        outcome_bought = last_trade.get("outcome", "").upper()
-        winning_outcome = "UP" if up_won else "DOWN"
-        if outcome_bought == winning_outcome:
-            streak = 1
-            last_size = float(last_trade.get("size", 0))
-            for t in trades[1:]:
-                t_time = int(float(t.get("match_time", 0)))
-                t_w_s = (t_time // 300) * 300
-                t_up_won, _ = check_resolution(f"btc-updown-5m-{t_w_s}")
-                if t_up_won is not None:
-                    if t.get("outcome", "").upper() == ("UP" if t_up_won else "DOWN"):
-                        streak += 1
-                    else:
-                        break
-                else:
-                    break
-            return round(last_size, 2), streak
-        else:
-            return default_stake, 0
-    except Exception:
-        return default_stake, 0
-
-
 # ── Probe + bet phase ─────────────────────────────────────────────────────────────
-def run_probe_phase(ws: WSFeed, ptb: float, w_end: int, market: dict, clob_client=None, phase=1):
-    global sprint_stake, streak_1_stake, streak_2_stake
+def run_probe_phase(ws: WSFeed, ptb: float, w_end: int, market: dict, clob_client=None):
+    global streak_1_stake, streak_2_stake, streak_3_stake
     
     last_tick_ts       = None
     last_price         = ptb
@@ -428,19 +387,19 @@ def run_probe_phase(ws: WSFeed, ptb: float, w_end: int, market: dict, clob_clien
     s2_decided_side    = None
     s2_entry_price     = None
 
-    # ── Signal tracking state ────────────────────────────────────────────────
+    s3_decided_side    = None
+    s3_entry_price     = None
+
+    # Signal state
     last_clear_signal      = None
     last_clear_up_ask      = None
     last_clear_down_ask    = None
     last_clear_mark        = None
 
-    print(f"\n  Streaming last {WAKE_UP_BEFORE}s — probes at: {PROBE_MARKS}s before close")
-    print(f"  Current Mode: PHASE {phase} " + ("(Sprint 100% Wallet)" if phase == 1 else "(Safe Compounding 50/50 Split)"))
-    if phase == 1:
-        print(f"    - Sprint Stake     : ${sprint_stake:.2f} pUSD")
-    else:
-        print(f"    - Streak 1 Stake   : ${streak_1_stake:.2f} pUSD")
-        print(f"    - Streak 2 Stake   : ${streak_2_stake:.2f} pUSD")
+    print(f"\n  Streaming last {WAKE_UP_BEFORE}s — S1 Trend (T-80s to T-15s), S2 & S3 Close (T-12s to T-5s)")
+    print(f"    - Streak 1 Stake   : ${streak_1_stake:.2f} pUSD")
+    print(f"    - Streak 2 Stake   : ${streak_2_stake:.2f} pUSD")
+    print(f"    - Streak 3 Stake   : ${streak_3_stake:.2f} pUSD")
     print(f"  {'─'*72}")
 
     while True:
@@ -450,7 +409,7 @@ def run_probe_phase(ws: WSFeed, ptb: float, w_end: int, market: dict, clob_clien
         if remaining <= -3:
             break
 
-        # New tick?
+        # Ticks
         ws_data = ws.latest()
         if ws_data:
             price, ts_ms = ws_data
@@ -466,7 +425,7 @@ def run_probe_phase(ws: WSFeed, ptb: float, w_end: int, market: dict, clob_clien
                     f"ptb=${ptb:,.2f}  {int(remaining):>3}s left"
                 )
 
-        # Fire probes at each countdown mark
+        # Probes
         for mark in PROBE_MARKS:
             if mark in probes_done:
                 continue
@@ -479,7 +438,6 @@ def run_probe_phase(ws: WSFeed, ptb: float, w_end: int, market: dict, clob_clien
                 up_str   = f"${up_ask:.4f}"   if up_ask   else "  NONE"
                 down_str = f"${down_ask:.4f}" if down_ask else "  NONE"
 
-                # Update signal
                 signal_tag = ""
                 current_move = last_price - ptb
                 current_dir = "UP" if current_move > 0 else "DOWN"
@@ -518,150 +476,89 @@ def run_probe_phase(ws: WSFeed, ptb: float, w_end: int, market: dict, clob_clien
                 })
 
                 in_bet_window = (BET_WINDOW_END <= mark <= BET_WINDOW_START)
-                if in_bet_window:
+                if in_bet_window and last_clear_signal is not None:
                     # Skip bet if the whole number has not changed from PTB (decimal-only movement)
                     if int(last_price) == int(ptb):
                         continue
                         
-                    # ── Phase 1: Sprint Mode (100% Wallet) ──
-                    if phase == 1:
-                        if s1_decided_side is None and last_clear_signal is not None:
-                            if mark >= 70:      required_move = 40.0
-                            elif 35 <= mark <= 60: required_move = 20.0
-                            elif 15 <= mark <= 30: required_move = 15.0
-                            elif 5 <= mark <= 12:  required_move = 15.0
-                            else:                  required_move = 15.0
-
-                            if abs(last_price - ptb) >= required_move and last_clear_signal == current_dir:
-                                sig_ask = up_ask if last_clear_signal == "UP" else down_ask
-                                if sig_ask is not None:
-                                    s1_decided_side = last_clear_signal
-                                    s1_entry_price  = sig_ask
-                                    results[-1]["bet_placed"] = True
-                                    
-                                    order_msg = "PAPER SPRINT"
-                                    order_details = ""
-                                    if clob_client is not None:
-                                        order_msg = "LIVE SPRINT"
-                                        print(f"\n  🚀 [SPRINT] PLACING LIVE ORDER: {s1_decided_side} outcome...")
-                                        try:
-                                            from py_clob_client_v2 import MarketOrderArgsV2
-                                            token_id = market["up_id"] if s1_decided_side == "UP" else market["down_id"]
-                                            resp = clob_client.create_and_post_market_order(
-                                                order_args=MarketOrderArgsV2(
-                                                    token_id=token_id, amount=sprint_stake, side="BUY"
-                                                )
+                    # ── STREAK 1: Trend Catcher (Early-Entry: T-80s to T-15s) ──
+                    if s1_decided_side is None and mark >= 15:
+                        required_move = 40.0
+                        abs_move = abs(last_price - ptb)
+                        if abs_move >= required_move and last_clear_signal == current_dir:
+                            sig_ask = up_ask if last_clear_signal == "UP" else down_ask
+                            if sig_ask is not None:
+                                s1_decided_side = last_clear_signal
+                                s1_entry_price  = sig_ask
+                                results[-1]["bet_placed"] = True
+                                order_msg = "PAPER [S1]"
+                                if clob_client is not None:
+                                    order_msg = "LIVE [S1]"
+                                    print(f"  🚀 [S1] PLACING LIVE ORDER: {s1_decided_side} outcome...")
+                                    try:
+                                        from py_clob_client_v2 import MarketOrderArgsV2
+                                        token_id = market["up_id"] if s1_decided_side == "UP" else market["down_id"]
+                                        clob_client.create_and_post_market_order(
+                                            order_args=MarketOrderArgsV2(
+                                                token_id=token_id, amount=streak_1_stake, side="BUY"
                                             )
-                                            print(f"  ✅ [SPRINT] Live order response: {resp}")
-                                            order_details = f"\n  │  Order ID: {resp.get('orderID', 'n/a')}                                   │"
-                                        except Exception as e:
-                                            print(f"  ❌ [SPRINT] Failed to place order: {e}")
-                                            order_msg = "LIVE SPRINT (FAILED)"
-                                            s1_decided_side = None
-                                            s1_entry_price = None
-                                            
-                                    if s1_decided_side is not None:
-                                        payout = sprint_stake / s1_entry_price
-                                        print(
-                                            f"\n  ┌──────────────────────────────────────────────────────────┐"
-                                            f"\n  │  🎯 {order_msg:<15}  →  {s1_decided_side:<4}  @ ${s1_entry_price:.4f}  (T-{mark}s)      │"
-                                            f"\n  │  Stake: ${sprint_stake:.2f}   Payout: ${payout:.4f}  Profit: +${payout-sprint_stake:.4f}           │"
-                                            + order_details +
-                                            f"\n  └──────────────────────────────────────────────────────────┘"
                                         )
+                                    except Exception as e:
+                                        print(f"  ❌ [S1] Failed to place order: {e}")
+                                        s1_decided_side = None
 
-                    # ── Phase 2: Safe Compounding Mode (50/50 Split) ──
-                    else:
-                        # Streak 1 (All-Rules)
-                        if s1_decided_side is None and last_clear_signal is not None:
-                            if mark >= 70:      required_move = 40.0
-                            elif 35 <= mark <= 60: required_move = 20.0
-                            elif 15 <= mark <= 30: required_move = 15.0
-                            elif 5 <= mark <= 12:  required_move = 15.0
-                            else:                  required_move = 15.0
-
-                            if abs(last_price - ptb) >= required_move and last_clear_signal == current_dir:
-                                sig_ask = up_ask if last_clear_signal == "UP" else down_ask
-                                if sig_ask is not None:
-                                    s1_decided_side = last_clear_signal
-                                    s1_entry_price  = sig_ask
-                                    results[-1]["bet_placed"] = True
-                                    
-                                    order_msg = "PAPER BET [S1]"
-                                    order_details = ""
-                                    if clob_client is not None:
-                                        order_msg = "LIVE BET [S1]"
-                                        print(f"\n  🚀 [S1] PLACING LIVE ORDER: {s1_decided_side} outcome...")
-                                        try:
-                                            from py_clob_client_v2 import MarketOrderArgsV2
-                                            token_id = market["up_id"] if s1_decided_side == "UP" else market["down_id"]
-                                            resp = clob_client.create_and_post_market_order(
-                                                order_args=MarketOrderArgsV2(
-                                                    token_id=token_id, amount=streak_1_stake, side="BUY"
-                                                )
-                                            )
-                                            print(f"  ✅ [S1] Live order response: {resp}")
-                                            order_details = f"\n  │  Order ID: {resp.get('orderID', 'n/a')}                                   │"
-                                        except Exception as e:
-                                            print(f"  ❌ [S1] Failed to place order: {e}")
-                                            order_msg = "LIVE BET [S1] (FAILED)"
-                                            s1_decided_side = None
-                                            s1_entry_price = None
-
-                                    if s1_decided_side is not None:
-                                        payout = streak_1_stake / s1_entry_price
-                                        print(
-                                            f"\n  ┌──────────────────────────────────────────────────────────┐"
-                                            f"\n  │  🎯 {order_msg:<15}  →  {s1_decided_side:<4}  @ ${s1_entry_price:.4f}  (T-{mark}s)      │"
-                                            f"\n  │  Stake: ${streak_1_stake:.2f}   Payout: ${payout:.4f}  Profit: +${payout-streak_1_stake:.4f}           │"
-                                            + order_details +
-                                            f"\n  └──────────────────────────────────────────────────────────┘"
-                                        )
-
-                        # Streak 2 (Close-Only)
-                        if s2_decided_side is None and (5 <= mark <= 12) and last_clear_signal is not None:
-                            required_move = 15.0
-                            if abs(last_price - ptb) >= required_move and last_clear_signal == current_dir:
-                                sig_ask = up_ask if last_clear_signal == "UP" else down_ask
-                                if sig_ask is not None:
+                    # ── STREAK 2 & 3: Close Guardians (Late-Entry: T-12s to T-5s) ──
+                    if mark <= 12:
+                        required_move = 5.0
+                        abs_move = abs(last_price - ptb)
+                        if abs_move >= required_move and last_clear_signal == current_dir:
+                            sig_ask = up_ask if last_clear_signal == "UP" else down_ask
+                            if sig_ask is not None:
+                                # Streak 2
+                                if s2_decided_side is None:
                                     s2_decided_side = last_clear_signal
                                     s2_entry_price  = sig_ask
                                     results[-1]["bet_placed"] = True
-                                    
-                                    order_msg = "PAPER BET [S2]"
-                                    order_details = ""
+                                    order_msg = "PAPER [S2]"
                                     if clob_client is not None:
-                                        order_msg = "LIVE BET [S2]"
-                                        print(f"\n  🚀 [S2] PLACING LIVE ORDER: {s2_decided_side} outcome...")
+                                        order_msg = "LIVE [S2]"
+                                        print(f"  🚀 [S2] PLACING LIVE ORDER: {s2_decided_side} outcome...")
                                         try:
                                             from py_clob_client_v2 import MarketOrderArgsV2
                                             token_id = market["up_id"] if s2_decided_side == "UP" else market["down_id"]
-                                            resp = clob_client.create_and_post_market_order(
+                                            clob_client.create_and_post_market_order(
                                                 order_args=MarketOrderArgsV2(
                                                     token_id=token_id, amount=streak_2_stake, side="BUY"
                                                 )
                                             )
-                                            print(f"  ✅ [S2] Live order response: {resp}")
-                                            order_details = f"\n  │  Order ID: {resp.get('orderID', 'n/a')}                                   │"
                                         except Exception as e:
                                             print(f"  ❌ [S2] Failed to place order: {e}")
-                                            order_msg = "LIVE BET [S2] (FAILED)"
                                             s2_decided_side = None
-                                            s2_entry_price = None
 
-                                    if s2_decided_side is not None:
-                                        payout = streak_2_stake / s2_entry_price
-                                        print(
-                                            f"\n  ┌──────────────────────────────────────────────────────────┐"
-                                            f"\n  │  🎯 {order_msg:<15}  →  {s2_decided_side:<4}  @ ${s2_entry_price:.4f}  (T-{mark}s)      │"
-                                            f"\n  │  Stake: ${streak_2_stake:.2f}   Payout: ${payout:.4f}  Profit: +${payout-streak_2_stake:.4f}           │"
-                                            + order_details +
-                                            f"\n  └──────────────────────────────────────────────────────────┘"
-                                        )
+                                # Streak 3
+                                if s3_decided_side is None:
+                                    s3_decided_side = last_clear_signal
+                                    s3_entry_price  = sig_ask
+                                    results[-1]["bet_placed"] = True
+                                    order_msg = "PAPER [S3]"
+                                    if clob_client is not None:
+                                        order_msg = "LIVE [S3]"
+                                        print(f"  🚀 [S3] PLACING LIVE ORDER: {s3_decided_side} outcome...")
+                                        try:
+                                            from py_clob_client_v2 import MarketOrderArgsV2
+                                            token_id = market["up_id"] if s3_decided_side == "UP" else market["down_id"]
+                                            clob_client.create_and_post_market_order(
+                                                order_args=MarketOrderArgsV2(
+                                                    token_id=token_id, amount=streak_3_stake, side="BUY"
+                                                )
+                                            )
+                                        except Exception as e:
+                                            print(f"  ❌ [S3] Failed to place order: {e}")
+                                            s3_decided_side = None
 
         time.sleep(0.1)
 
-    return results, s1_decided_side, s1_entry_price, s2_decided_side, s2_entry_price, last_price
+    return results, s1_decided_side, s1_entry_price, s2_decided_side, s2_entry_price, s3_decided_side, s3_entry_price, last_price
 
 
 # ── Settlement ────────────────────────────────────────────────────────────────────
@@ -687,7 +584,7 @@ def settle(slug, decided_side, entry_price, stake_usd, name="S1"):
 
 
 # ── Summary table ─────────────────────────────────────────────────────────────────
-def print_summary(results, w_start, w_end, ptb, last_price, s1_side, s1_price, s2_side, s2_price):
+def print_summary(results, w_start, w_end, ptb, last_price, s1_side, s1_price, s2_side, s2_price, s3_side, s3_price):
     net = last_price - ptb
     direction = "UP ▲" if net > 0 else "DOWN ▼"
 
@@ -697,9 +594,11 @@ def print_summary(results, w_start, w_end, ptb, last_price, s1_side, s1_price, s
     print(f"  🏁 Final Price    : ${last_price:,.2f}  (next window's PTB)")
     print(f"  📊 Net move       : {net:>+.2f}   →  {direction}")
     if s1_side:
-        print(f"  🎯 Bet [Streak 1] : {s1_side} @ ${s1_price:.4f}")
+        print(f"  🎯 Bet [Streak 1] : {s1_side} @ ${s1_price:.4f} (Early Trend)")
     if s2_side:
-        print(f"  🎯 Bet [Streak 2] : {s2_side} @ ${s2_price:.4f}")
+        print(f"  🎯 Bet [Streak 2] : {s2_side} @ ${s2_price:.4f} (Late Close)")
+    if s3_side:
+        print(f"  🎯 Bet [Streak 3] : {s3_side} @ ${s3_price:.4f} (Late Close)")
     print(f"  {'─'*72}")
     print(f"  {'T-MARK':>8}  {'TIME':>8}  {'UP ASK':>8}  {'DOWN ASK':>9}  STATUS")
     print(f"  {'─'*72}")
@@ -716,11 +615,11 @@ def print_summary(results, w_start, w_end, ptb, last_price, s1_side, s1_price, s
 
 # ── Entry point ───────────────────────────────────────────────────────────────────
 def main():
-    global sprint_stake, sprint_wins, streak_1_stake, streak_1_wins, streak_2_stake, streak_2_wins
+    global streak_1_stake, streak_1_wins, streak_2_stake, streak_2_wins, streak_3_stake, streak_3_wins
     
     mode_str = "LIVE BET" if POLYMARKET_LIVE_TRADING else "PAPER BET"
     print(f"\n{'═'*72}")
-    print(f"  HYBRID SPRINT COMPOUNDING BOT  +  {mode_str}")
+    print(f"  TRIPLE HYBRID SCALING BOT  +  {mode_str}")
     print(f"{'═'*72}\n")
 
     clob_client = None
@@ -770,39 +669,30 @@ def main():
     btc_now, _ = tick
     print(f"  ✅ WS connected — BTC/USD: ${btc_now:,.2f}\n")
 
-    # ── Initial Balance check & Onboarding stakes ──────────────────────────────────
+    # ── Initial Balance check & Split ──────────────────────────────────────────────
     if POLYMARKET_LIVE_TRADING and clob_client is not None:
         print("  🔄 Querying live wallet balance...")
         bal = get_live_balance(clob_client)
         if bal is not None:
             print(f"  💰 Live Balance: ${bal:.2f} pUSD")
-            default_start = max(1.00, round(bal - 0.05, 2))
+            suggested_split = max(1.00, round((bal - 0.15) / 3.0, 2))
         else:
-            default_start = 5.00
-            bal = 5.05
-            print("  ⚠️ Could not fetch balance. Defaulting starting stake reference to $5.00 pUSD")
+            suggested_split = 1.00
             
         try:
-            user_in = input(f"  👉 Enter starting stake [Default ${default_start:.2f}]: ").strip()
-            starting_stake = float(user_in) if user_in else default_start
+            user_in = input(f"  👉 Enter starting stake for each streak [Default ${suggested_split:.2f}]: ").strip()
+            starting_stake = float(user_in) if user_in else suggested_split
         except ValueError:
-            starting_stake = default_start
+            starting_stake = suggested_split
 
-        # Reconstruct state
-        if bal < 10.00:
-            # Phase 1: Sprint Mode
-            print("  🏃 Wallet < $10.00: Running in Phase 1 (Sprint 100% Wallet)")
-            sprint_stake, sprint_wins = reconstruct_sprint_on_startup(clob_client, starting_stake)
-        else:
-            # Phase 2: Dual Streak mode
-            print("  🛡️ Wallet >= $10.00: Running in Phase 2 (Safe Dual 50/50 Split)")
-            split_stake = max(1.00, round((bal - 0.10) / 2.0, 2))
-            streak_1_stake = split_stake
-            streak_2_stake = split_stake
+        streak_1_stake = starting_stake
+        streak_2_stake = starting_stake
+        streak_3_stake = starting_stake
     else:
-        starting_stake = 5.00
-        sprint_stake = 5.00
-        bal = 5.00
+        starting_stake = 1.00
+        streak_1_stake = 1.00
+        streak_2_stake = 1.00
+        streak_3_stake = 1.00
 
     # ── Continuous Trading Loop ──────────────────────────────────────────────────
     while True:
@@ -813,21 +703,13 @@ def main():
             secs_into = now - w_s
             remaining = w_e - now
 
-            if POLYMARKET_LIVE_TRADING and clob_client is not None:
-                bal = get_live_balance(clob_client) or bal
-
-            phase = 1 if bal < 10.00 else 2
-
             print(f"\n{'═'*72}")
             print(f"  🆕 STARTING NEW CYCLE")
             print(f"  Current time   : {fmt(now)}")
             print(f"  Current window : {fmt_win(w_s)}")
-            print(f"  Wallet Balance : ${bal:.2f} pUSD  →  PHASE {phase}")
-            if phase == 1:
-                print(f"  [Sprint Streak]: {sprint_wins} Wins (No Cap)  |  Active Stake: ${sprint_stake:.2f} pUSD")
-            else:
-                print(f"  [S1] All-Rules : {streak_1_wins}/{STREAK_WIN_CAP} Wins  |  Stake: ${streak_1_stake:.2f} pUSD")
-                print(f"  [S2] Close-Only: {streak_2_wins}/{STREAK_WIN_CAP} Wins  |  Stake: ${streak_2_stake:.2f} pUSD")
+            print(f"  [S1] Streak 1  : {streak_1_wins}/{STREAK_WIN_CAP} Wins  |  Stake: ${streak_1_stake:.2f} pUSD (Trend)")
+            print(f"  [S2] Streak 2  : {streak_2_wins}/{STREAK_WIN_CAP} Wins  |  Stake: ${streak_2_stake:.2f} pUSD (Close)")
+            print(f"  [S3] Streak 3  : {streak_3_wins}/{STREAK_WIN_CAP} Wins  |  Stake: ${streak_3_stake:.2f} pUSD (Close)")
             print(f"  Bet window     : T-{BET_WINDOW_START}s → T-{BET_WINDOW_END}s")
             print(f"{'═'*72}\n")
 
@@ -886,96 +768,79 @@ def main():
                 print(f"  ⏳ Sleeping {int(wait_secs)}s — will wake up at T-{WAKE_UP_BEFORE}s ({fmt(wake_at)})...\n")
                 time.sleep(wait_secs)
 
-            # Re-query balance and update stakes right before trading (T-90s)
-            if POLYMARKET_LIVE_TRADING and clob_client is not None:
-                new_bal = get_live_balance(clob_client)
-                if new_bal is not None:
-                    bal = new_bal
-                    phase = 1 if bal < 10.00 else 2
-                    if phase == 1:
-                        # Sprint Mode always stakes 100% of the active wallet balance
-                        sprint_stake = max(1.00, round(bal - 0.05, 2))
-                    else:
-                        # Safe Compounding Mode updates stakes for streaks starting fresh (0 wins)
-                        split_stake = max(1.00, round((bal - 0.10) / 2.0, 2))
-                        if streak_1_wins == 0:
-                            streak_1_stake = split_stake
-                        if streak_2_wins == 0:
-                            streak_2_stake = split_stake
-
             # ── Run the probe + bet phase ─────────────────────────────────────────────
-            results, s1_side, s1_price, s2_side, s2_price, last_price = run_probe_phase(
-                ws, ptb, w_e, market, clob_client=clob_client, phase=phase
+            results, s1_side, s1_price, s2_side, s2_price, s3_side, s3_price, last_price = run_probe_phase(
+                ws, ptb, w_e, market, clob_client=clob_client
             )
 
             # ── Window close summary ──────────────────────────────────────────────────
-            if phase == 1:
-                print_summary(results, w_s, w_e, ptb, last_price, s1_side, s1_price, None, None)
-            else:
-                print_summary(results, w_s, w_e, ptb, last_price, s1_side, s1_price, s2_side, s2_price)
+            print_summary(results, w_s, w_e, ptb, last_price, s1_side, s1_price, s2_side, s2_price, s3_side, s3_price)
 
             # ── Settlement calculations ────────────────────────────────────────
             actual_direction = "UP" if (last_price > ptb) else "DOWN"
 
-            # Phase 1: Sprint Settlement
-            if phase == 1:
-                if s1_side and s1_price:
-                    won = (s1_side == actual_direction)
-                    s_old = sprint_stake
-                    if won:
-                        sprint_wins += 1
-                        sprint_stake = round(s_old / s1_price, 2)
-                        print(f"  💰 [SPRINT WIN] Win #{sprint_wins}! Payout rolled over: ${sprint_stake:.2f} pUSD")
-                    else:
-                        print("  ❌ [SPRINT LOSS] Safety reset: Stake dropping back to exactly $1.00 pUSD.")
-                        sprint_stake = 1.00
-                        sprint_wins = 0
-
-                    threading.Thread(target=settle, args=(slug, s1_side, s1_price, s_old, "SPRINT"), daemon=True).start()
-
-            # Phase 2: Dual Streak Settlement
-            else:
-                # Settle S1
-                s1_old = streak_1_stake
-                if s1_side and s1_price:
-                    s1_won = (s1_side == actual_direction)
-                    if s1_won:
-                        streak_1_wins += 1
-                        streak_1_stake = round(s1_old / s1_price, 2)
-                        print(f"  💰 [S1 WIN] Win {streak_1_wins}/{STREAK_WIN_CAP}! Payout rolled over: ${streak_1_stake:.2f} pUSD")
-                        if streak_1_wins >= STREAK_WIN_CAP:
-                            print(f"  🏆 [S1 COMPLETED] Resetting streak 1...")
-                            bal = get_live_balance(clob_client) if clob_client else None
-                            streak_1_stake = max(1.00, round((bal - 0.10) / 2.0, 2)) if bal else 1.00
-                            streak_1_wins = 0
-                    else:
-                        print(f"  ❌ [S1 LOSS] Resetting streak 1.")
+            # Settle S1
+            s1_old = streak_1_stake
+            if s1_side and s1_price:
+                s1_won = (s1_side == actual_direction)
+                if s1_won:
+                    streak_1_wins += 1
+                    streak_1_stake = round(s1_old / s1_price, 2)
+                    print(f"  💰 [S1 WIN] Win {streak_1_wins}/{STREAK_WIN_CAP}! Payout rolled over: ${streak_1_stake:.2f} pUSD")
+                    if streak_1_wins >= STREAK_WIN_CAP:
+                        print(f"  🏆 [S1 COMPLETED] Resetting streak 1...")
                         bal = get_live_balance(clob_client) if clob_client else None
-                        streak_1_stake = max(1.00, round((bal - 0.10) / 2.0, 2)) if bal else 1.00
+                        streak_1_stake = max(1.00, round((bal - 0.15) / 3.0, 2)) if bal else 1.00
                         streak_1_wins = 0
-                    
-                    threading.Thread(target=settle, args=(slug, s1_side, s1_price, s1_old, "S1"), daemon=True).start()
+                else:
+                    print(f"  ❌ [S1 LOSS] Resetting streak 1.")
+                    bal = get_live_balance(clob_client) if clob_client else None
+                    streak_1_stake = max(1.00, round((bal - 0.15) / 3.0, 2)) if bal else 1.00
+                    streak_1_wins = 0
+                
+                threading.Thread(target=settle, args=(slug, s1_side, s1_price, s1_old, "S1"), daemon=True).start()
 
-                # Settle S2
-                s2_old = streak_2_stake
-                if s2_side and s2_price:
-                    s2_won = (s2_side == actual_direction)
-                    if s2_won:
-                        streak_2_wins += 1
-                        streak_2_stake = round(s2_old / s2_price, 2)
-                        print(f"  💰 [S2 WIN] Win {streak_2_wins}/{STREAK_WIN_CAP}! Payout rolled over: ${streak_2_stake:.2f} pUSD")
-                        if streak_2_wins >= STREAK_WIN_CAP:
-                            print(f"  🏆 [S2 COMPLETED] Resetting streak 2...")
-                            bal = get_live_balance(clob_client) if clob_client else None
-                            streak_2_stake = max(1.00, round((bal - 0.10) / 2.0, 2)) if bal else 1.00
-                            streak_2_wins = 0
-                    else:
-                        print(f"  ❌ [S2 LOSS] Resetting streak 2.")
+            # Settle S2
+            s2_old = streak_2_stake
+            if s2_side and s2_price:
+                s2_won = (s2_side == actual_direction)
+                if s2_won:
+                    streak_2_wins += 1
+                    streak_2_stake = round(s2_old / s2_price, 2)
+                    print(f"  💰 [S2 WIN] Win {streak_2_wins}/{STREAK_WIN_CAP}! Payout rolled over: ${streak_2_stake:.2f} pUSD")
+                    if streak_2_wins >= STREAK_WIN_CAP:
+                        print(f"  🏆 [S2 COMPLETED] Resetting streak 2...")
                         bal = get_live_balance(clob_client) if clob_client else None
-                        streak_2_stake = max(1.00, round((bal - 0.10) / 2.0, 2)) if bal else 1.00
+                        streak_2_stake = max(1.00, round((bal - 0.15) / 3.0, 2)) if bal else 1.00
                         streak_2_wins = 0
-                    
-                    threading.Thread(target=settle, args=(slug, s2_side, s2_price, s2_old, "S2"), daemon=True).start()
+                else:
+                    print(f"  ❌ [S2 LOSS] Resetting streak 2.")
+                    bal = get_live_balance(clob_client) if clob_client else None
+                    streak_2_stake = max(1.00, round((bal - 0.15) / 3.0, 2)) if bal else 1.00
+                    streak_2_wins = 0
+                
+                threading.Thread(target=settle, args=(slug, s2_side, s2_price, s2_old, "S2"), daemon=True).start()
+
+            # Settle S3
+            s3_old = streak_3_stake
+            if s3_side and s3_price:
+                s3_won = (s3_side == actual_direction)
+                if s3_won:
+                    streak_3_wins += 1
+                    streak_3_stake = round(s3_old / s3_price, 2)
+                    print(f"  💰 [S3 WIN] Win {streak_3_wins}/{STREAK_WIN_CAP}! Payout rolled over: ${streak_3_stake:.2f} pUSD")
+                    if streak_3_wins >= STREAK_WIN_CAP:
+                        print(f"  🏆 [S3 COMPLETED] Resetting streak 3...")
+                        bal = get_live_balance(clob_client) if clob_client else None
+                        streak_3_stake = max(1.00, round((bal - 0.15) / 3.0, 2)) if bal else 1.00
+                        streak_3_wins = 0
+                else:
+                    print(f"  ❌ [S3 LOSS] Resetting streak 3.")
+                    bal = get_live_balance(clob_client) if clob_client else None
+                    streak_3_stake = max(1.00, round((bal - 0.15) / 3.0, 2)) if bal else 1.00
+                    streak_3_wins = 0
+                
+                threading.Thread(target=settle, args=(slug, s3_side, s3_price, s3_old, "S3"), daemon=True).start()
 
             time.sleep(2)
 
