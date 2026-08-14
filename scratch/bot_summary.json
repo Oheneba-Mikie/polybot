@@ -1,0 +1,34 @@
+{
+  "Hybrid Sprint Bot (Early/Mid All-Rules: T-80s to T-35s)": {
+    "total_trades": 124,
+    "wins": 70,
+    "losses": 54,
+    "win_rate_pct": 56.5,
+    "stake_spent_usd": 135.73,
+    "pnl_usd": -14.33
+  },
+  "Close-Only Bot (Late Entries: T-12s to T-2s, $0.65-$0.89)": {
+    "total_trades": 3,
+    "wins": 3,
+    "losses": 0,
+    "win_rate_pct": 100.0,
+    "stake_spent_usd": 3.11,
+    "pnl_usd": 0.81
+  },
+  "Scalper / Extremes Execution ($0.90 - $0.99)": {
+    "total_trades": 132,
+    "wins": 121,
+    "losses": 11,
+    "win_rate_pct": 91.7,
+    "stake_spent_usd": 135.94,
+    "pnl_usd": -8.88
+  },
+  "Long-Shot / Distressed Orders ($0.01 - $0.35)": {
+    "total_trades": 10,
+    "wins": 2,
+    "losses": 8,
+    "win_rate_pct": 20.0,
+    "stake_spent_usd": 9.82,
+    "pnl_usd": -2.11
+  }
+}

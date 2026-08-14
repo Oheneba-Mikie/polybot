@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PolyBot — Pure Close Rollover Console</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0b0f17;
+      --card-bg: #141b27;
+      --border: #232d3f;
+      --primary: #6366f1;
+      --success: #10b981;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+      --text: #f3f4f6;
+      --text-muted: #9ca3af;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+    body { background: var(--bg); color: var(--text); padding: 24px; min-height: 100vh; }
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
+    .header h1 { font-size: 24px; font-weight: 800; display: flex; align-items: center; gap: 10px; }
+    .badge { font-size: 12px; padding: 4px 10px; border-radius: 20px; font-weight: 600; text-transform: uppercase; }
+    .badge-live { background: rgba(16, 185, 129, 0.15); color: var(--success); border: 1px solid var(--success); }
+    .badge-paper { background: rgba(245, 158, 11, 0.15); color: var(--warning); border: 1px solid var(--warning); }
+    
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 24px; }
+    .card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 18px; }
+    .card-title { font-size: 13px; color: var(--text-muted); font-weight: 500; margin-bottom: 8px; }
+    .card-value { font-size: 26px; font-weight: 800; }
+    .text-success { color: var(--success); }
+    .text-indigo { color: var(--primary); }
+    
+    .main-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    @media(max-width: 900px) { .main-layout { grid-template-columns: 1fr; } }
+    
+    .section-title { font-size: 16px; font-weight: 700; margin-bottom: 14px; display: flex; justify-content: space-between; }
+    .console-box { background: #07090e; border: 1px solid var(--border); border-radius: 10px; padding: 14px; height: 420px; overflow-y: auto; font-family: 'JetBrains Mono', monospace; font-size: 12px; line-height: 1.6; color: #d1d5db; }
+    .log-line { margin-bottom: 4px; }
+    
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--border); }
+    th { color: var(--text-muted); font-weight: 600; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>⚡ PolyBot <span style="font-size: 14px; font-weight: 500; color: var(--text-muted);">Pure Close Rollover</span></h1>
+    <div id="mode-badge" class="badge badge-paper">Connecting...</div>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <div class="card-title">Live Balance</div>
+      <div class="card-value text-success" id="wallet-bal">$0.00</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Current Streak Stake</div>
+      <div class="card-value text-indigo" id="current-stake">$1.00</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Win Streak</div>
+      <div class="card-value" id="win-streak">0 Wins</div>
+    </div>
+    <div class="card">
+      <div class="card-title">BTC Live / PTB</div>
+      <div class="card-value" style="font-size: 20px;" id="btc-info">$0.00</div>
+    </div>
+  </div>
+
+  <div class="main-layout">
+    <div class="card">
+      <div class="section-title">
+        <span>📜 Terminal Output</span>
+        <span style="font-size: 12px; color: var(--text-muted);" id="window-info">---</span>
+      </div>
+      <div class="console-box" id="console-box">Loading console logs...</div>
+    </div>
+
+    <div class="card">
+      <div class="section-title">
+        <span>🏆 Recent Trades</span>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Time</th>
+            <th>Market</th>
+            <th>Bet</th>
+            <th>Price</th>
+            <th>Result</th>
+          </tr>
+        </thead>
+        <tbody id="trade-table">
+          <tr><td colspan="5" style="text-align: center; color: var(--text-muted);">No trades yet this session.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    async function updateDashboard() {
+      try {
+        const res = await fetch('/api/state');
+        const data = await res.json();
+
+        // Badge
+        const badge = document.getElementById('mode-badge');
+        if (data.live_trading) {
+          badge.className = 'badge badge-live';
+          badge.textContent = '● Live Trading Active';
+        } else {
+          badge.className = 'badge badge-paper';
+          badge.textContent = '○ Paper Trading Mode';
+        }
+
+        // Stat cards
+        document.getElementById('wallet-bal').textContent = `$${data.wallet_balance.toFixed(2)}`;
+        document.getElementById('current-stake').textContent = `$${data.current_stake.toFixed(2)}`;
+        document.getElementById('win-streak').textContent = `${data.wins_streak} Wins 🔥`;
+        document.getElementById('btc-info').textContent = `$${data.btc_price.toLocaleString()} / $${data.btc_ptb.toLocaleString()}`;
+        document.getElementById('window-info').textContent = data.window_str;
+
+        // Logs
+        const consoleBox = document.getElementById('console-box');
+        consoleBox.innerHTML = data.console_logs.map(line => `<div class="log-line">${line}</div>`).join('');
+        consoleBox.scrollTop = consoleBox.scrollHeight;
+
+        // Trade table
+        const tbody = document.getElementById('trade-table');
+        if (data.trade_history.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">No trades settled yet.</td></tr>';
+        } else {
+          tbody.innerHTML = data.trade_history.map(t => {
+            const resClass = t.won ? 'text-success' : 'text-danger';
+            const resTag = t.won ? 'WIN ✅' : 'LOSS ❌';
+            return `<tr>
+              <td>${t.timestamp}</td>
+              <td>${t.slug}</td>
+              <td><b>${t.side}</b></td>
+              <td>$${t.price.toFixed(4)}</td>
+              <td class="${resClass}"><b>${resTag} (${t.pnl >= 0 ? '+' : ''}$${t.pnl})</b></td>
+            </tr>`;
+          }).join('');
+        }
+      } catch (err) {
+        console.error('Update error:', err);
+      }
+    }
+
+    setInterval(updateDashboard, 1500);
+    updateDashboard();
+  </script>
+</body>
+</html>

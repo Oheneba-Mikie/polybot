@@ -1,0 +1,184 @@
+[
+  {
+    "time_str": "2026-07-19 17:03:41",
+    "market_question": "Bitcoin Up or Down - July 19, 1:00PM-1:05PM ET",
+    "outcome_bet": "down",
+    "entry_price": 0.84,
+    "gap": 49.26000000000204
+  },
+  {
+    "time_str": "2026-07-19 18:23:41",
+    "market_question": "Bitcoin Up or Down - July 19, 2:20PM-2:25PM ET",
+    "outcome_bet": "down",
+    "entry_price": 0.65,
+    "gap": 28.889999999999418
+  },
+  {
+    "time_str": "2026-07-20 01:28:41",
+    "market_question": "Bitcoin Up or Down - July 19, 9:25PM-9:30PM ET",
+    "outcome_bet": "up",
+    "entry_price": 0.73,
+    "gap": 19.17000000000553
+  },
+  {
+    "time_str": "2026-07-20 02:08:53",
+    "market_question": "Bitcoin Up or Down - July 19, 10:05PM-10:10PM ET",
+    "outcome_bet": "down",
+    "entry_price": 0.97,
+    "gap": 30.540000000000873
+  },
+  {
+    "time_str": "2026-07-20 12:33:51",
+    "market_question": "Bitcoin Up or Down - July 20, 8:30AM-8:35AM ET",
+    "outcome_bet": "down",
+    "entry_price": 0.96,
+    "gap": 51.25999999999476
+  },
+  {
+    "time_str": "2026-07-21 14:49:36",
+    "market_question": "Bitcoin Up or Down - July 21, 10:45AM-10:50AM ET",
+    "outcome_bet": "up",
+    "entry_price": 0.76,
+    "gap": 66.3799999999901
+  },
+  {
+    "time_str": "2026-07-21 14:58:41",
+    "market_question": "Bitcoin Up or Down - July 21, 10:55AM-11:00AM ET",
+    "outcome_bet": "up",
+    "entry_price": 0.92,
+    "gap": 27.820000000006985
+  },
+  {
+    "time_str": "2026-07-21 16:59:01",
+    "market_question": "Bitcoin Up or Down - July 21, 12:55PM-1:00PM ET",
+    "outcome_bet": "up",
+    "entry_price": 0.66,
+    "gap": 67.59000000001106
+  },
+  {
+    "time_str": "2026-07-21 18:04:10",
+    "market_question": "Bitcoin Up or Down - July 21, 2:00PM-2:05PM ET",
+    "outcome_bet": "down",
+    "entry_price": 0.89,
+    "gap": 53.11000000000058
+  },
+  {
+    "time_str": "2026-07-22 12:49:20",
+    "market_question": "Bitcoin Up or Down - July 22, 8:45AM-8:50AM ET",
+    "outcome_bet": "up",
+    "entry_price": 0.35,
+    "gap": 78.63000000000466
+  },
+  {
+    "time_str": "2026-07-22 13:54:10",
+    "market_question": "Bitcoin Up or Down - July 22, 9:50AM-9:55AM ET",
+    "outcome_bet": "down",
+    "entry_price": 0.83,
+    "gap": 100.64999999999418
+  },
+  {
+    "time_str": "2026-07-22 17:03:51",
+    "market_question": "Bitcoin Up or Down - July 22, 1:00PM-1:05PM ET",
+    "outcome_bet": "up",
+    "entry_price": 0.97,
+    "gap": 33.2899999999936
+  },
+  {
+    "time_str": "2026-07-22 21:59:31",
+    "market_question": "Bitcoin Up or Down - July 22, 5:55PM-6:00PM ET",
+    "outcome_bet": "down",
+    "entry_price": 0.7,
+    "gap": 17.710000000006403
+  },
+  {
+    "time_str": "2026-07-22 22:24:01",
+    "market_question": "Bitcoin Up or Down - July 22, 6:20PM-6:25PM ET",
+    "outcome_bet": "down",
+    "entry_price": 0.93,
+    "gap": 54.919999999998254
+  },
+  {
+    "time_str": "2026-07-23 02:04:41",
+    "market_question": "Bitcoin Up or Down - July 22, 10:00PM-10:05PM ET",
+    "outcome_bet": "down",
+    "entry_price": 0.68,
+    "gap": 56.48999999999069
+  },
+  {
+    "time_str": "2026-07-23 04:29:56",
+    "market_question": "Bitcoin Up or Down - July 23, 12:25AM-12:30AM ET",
+    "outcome_bet": "up",
+    "entry_price": 0.13,
+    "gap": 41.00999999999476
+  },
+  {
+    "time_str": "2026-07-23 16:58:42",
+    "market_question": "Bitcoin Up or Down - July 23, 12:55PM-1:00PM ET",
+    "outcome_bet": "up",
+    "entry_price": 0.99,
+    "gap": 38.11000000000058
+  },
+  {
+    "time_str": "2026-07-24 01:28:41",
+    "market_question": "Bitcoin Up or Down - July 23, 9:25PM-9:30PM ET",
+    "outcome_bet": "up",
+    "entry_price": 0.98,
+    "gap": 24.37999999999738
+  },
+  {
+    "time_str": "2026-07-24 10:39:01",
+    "market_question": "Bitcoin Up or Down - July 24, 6:35AM-6:40AM ET",
+    "outcome_bet": "up",
+    "entry_price": 0.87,
+    "gap": 20.0
+  },
+  {
+    "time_str": "2026-07-24 12:34:01",
+    "market_question": "Bitcoin Up or Down - July 24, 8:30AM-8:35AM ET",
+    "outcome_bet": "up",
+    "entry_price": 0.86,
+    "gap": 34.75
+  },
+  {
+    "time_str": "2026-07-26 22:49:53",
+    "market_question": "Bitcoin Up or Down - July 26, 6:45PM-6:50PM ET",
+    "outcome_bet": "down",
+    "entry_price": 0.25,
+    "gap": 49.9800000000032
+  },
+  {
+    "time_str": "2026-07-28 18:19:56",
+    "market_question": "Bitcoin Up or Down - July 28, 2:15PM-2:20PM ET",
+    "outcome_bet": "up",
+    "entry_price": 0.24,
+    "gap": 18.69000000000233
+  },
+  {
+    "time_str": "2026-07-29 03:24:55",
+    "market_question": "Bitcoin Up or Down - July 28, 11:20PM-11:25PM ET",
+    "outcome_bet": "up",
+    "entry_price": 0.98,
+    "gap": 40.44999999999709
+  },
+  {
+    "time_str": "2026-07-29 06:39:54",
+    "market_question": "Bitcoin Up or Down - July 29, 2:35AM-2:40AM ET",
+    "outcome_bet": "down",
+    "entry_price": 0.55,
+    "gap": 25.18000000000029
+  },
+  {
+    "time_str": "2026-07-30 13:39:56",
+    "market_question": "Bitcoin Up or Down - July 30, 9:35AM-9:40AM ET",
+    "outcome_bet": "up",
+    "entry_price": 0.47,
+    "gap": 25.099999999998545
+  },
+  {
+    "time_str": "2026-07-30 14:39:54",
+    "market_question": "Bitcoin Up or Down - July 30, 10:35AM-10:40AM ET",
+    "outcome_bet": "down",
+    "entry_price": 0.94,
+    "gap": 79.90000000000146
+  }
+]

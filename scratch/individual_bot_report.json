@@ -1,0 +1,392 @@
+{
+  "50_percent_trading_bot.py": {
+    "total_trades": 103,
+    "wins": 88,
+    "losses": 15,
+    "unresolved": 0,
+    "win_rate_pct": 85.4,
+    "volume_usd": 107.25,
+    "pnl_usd": -11.62,
+    "spec": {
+      "conf": 0.65,
+      "w_start": 80,
+      "w_end": 5,
+      "max_price": 1.0
+    }
+  },
+  "capped_triple_hybrid_bot.py": {
+    "total_trades": 103,
+    "wins": 88,
+    "losses": 15,
+    "unresolved": 0,
+    "win_rate_pct": 85.4,
+    "volume_usd": 107.25,
+    "pnl_usd": -11.62,
+    "spec": {
+      "conf": 0.65,
+      "w_start": 80,
+      "w_end": 5,
+      "max_price": 1.0
+    }
+  },
+  "close_to_market_bot.py": {
+    "total_trades": 9,
+    "wins": 4,
+    "losses": 5,
+    "unresolved": 0,
+    "win_rate_pct": 44.4,
+    "volume_usd": 10.26,
+    "pnl_usd": -2.79,
+    "spec": {
+      "conf": 0.65,
+      "w_start": 80,
+      "w_end": 5,
+      "max_price": 0.9
+    }
+  },
+  "close_to_market_offpeak_rollover_bot.py": {
+    "total_trades": 1,
+    "wins": 0,
+    "losses": 1,
+    "unresolved": 0,
+    "win_rate_pct": 0.0,
+    "volume_usd": 1.9,
+    "pnl_usd": -1.9,
+    "spec": {
+      "conf": 0.65,
+      "w_start": 25,
+      "w_end": 5,
+      "max_price": 0.75
+    }
+  },
+  "close_to_market_rollover_bot.py": {
+    "total_trades": 2,
+    "wins": 2,
+    "losses": 0,
+    "unresolved": 0,
+    "win_rate_pct": 100.0,
+    "volume_usd": 2.06,
+    "pnl_usd": 0.29,
+    "spec": {
+      "conf": 0.65,
+      "w_start": 12,
+      "w_end": 5,
+      "max_price": 0.9
+    }
+  },
+  "combined_double_stake_bot.py": {
+    "total_trades": 107,
+    "wins": 94,
+    "losses": 13,
+    "unresolved": 0,
+    "win_rate_pct": 87.9,
+    "volume_usd": 110.26,
+    "pnl_usd": -10.95,
+    "spec": {
+      "conf": 0.85,
+      "w_start": 8,
+      "w_end": 2,
+      "max_price": 1.0
+    }
+  },
+  "combined_single_stake_bot.py": {
+    "total_trades": 107,
+    "wins": 94,
+    "losses": 13,
+    "unresolved": 0,
+    "win_rate_pct": 87.9,
+    "volume_usd": 110.26,
+    "pnl_usd": -10.95,
+    "spec": {
+      "conf": 0.85,
+      "w_start": 8,
+      "w_end": 2,
+      "max_price": 1.0
+    }
+  },
+  "dual_streak_scaling_bot.py": {
+    "total_trades": 103,
+    "wins": 88,
+    "losses": 15,
+    "unresolved": 0,
+    "win_rate_pct": 85.4,
+    "volume_usd": 107.25,
+    "pnl_usd": -11.62,
+    "spec": {
+      "conf": 0.65,
+      "w_start": 80,
+      "w_end": 5,
+      "max_price": 1.0
+    }
+  },
+  "five_mins_hybrid_sprint.py": {
+    "total_trades": 103,
+    "wins": 88,
+    "losses": 15,
+    "unresolved": 0,
+    "win_rate_pct": 85.4,
+    "volume_usd": 107.25,
+    "pnl_usd": -11.62,
+    "spec": {
+      "conf": 0.65,
+      "w_start": 80,
+      "w_end": 5,
+      "max_price": 1.0
+    }
+  },
+  "guarded_hybrid_sprint.py": {
+    "total_trades": 103,
+    "wins": 88,
+    "losses": 15,
+    "unresolved": 0,
+    "win_rate_pct": 85.4,
+    "volume_usd": 107.25,
+    "pnl_usd": -11.62,
+    "spec": {
+      "conf": 0.65,
+      "w_start": 80,
+      "w_end": 5,
+      "max_price": 1.0
+    }
+  },
+  "hybrid_sprint_bot.py": {
+    "total_trades": 103,
+    "wins": 88,
+    "losses": 15,
+    "unresolved": 0,
+    "win_rate_pct": 85.4,
+    "volume_usd": 107.25,
+    "pnl_usd": -11.62,
+    "spec": {
+      "conf": 0.65,
+      "w_start": 80,
+      "w_end": 5,
+      "max_price": 1.0
+    }
+  },
+  "latency_arb_bot.py": {
+    "total_trades": 103,
+    "wins": 88,
+    "losses": 15,
+    "unresolved": 0,
+    "win_rate_pct": 85.4,
+    "volume_usd": 107.25,
+    "pnl_usd": -11.62,
+    "spec": {
+      "conf": 0.65,
+      "w_start": 80,
+      "w_end": 5,
+      "max_price": 1.0
+    }
+  },
+  "off_peak_5mins_hybrid_sprint.py": {
+    "total_trades": 96,
+    "wins": 85,
+    "losses": 11,
+    "unresolved": 0,
+    "win_rate_pct": 88.5,
+    "volume_usd": 99.85,
+    "pnl_usd": -10.46,
+    "spec": {
+      "conf": 0.65,
+      "w_start": 25,
+      "w_end": 5,
+      "max_price": 1.0
+    }
+  },
+  "peak_hours_run.py": {
+    "total_trades": 103,
+    "wins": 88,
+    "losses": 15,
+    "unresolved": 0,
+    "win_rate_pct": 85.4,
+    "volume_usd": 107.25,
+    "pnl_usd": -11.62,
+    "spec": {
+      "conf": 0.65,
+      "w_start": 80,
+      "w_end": 5,
+      "max_price": 1.0
+    }
+  },
+  "polybot.py": {
+    "total_trades": 103,
+    "wins": 88,
+    "losses": 15,
+    "unresolved": 0,
+    "win_rate_pct": 85.4,
+    "volume_usd": 107.25,
+    "pnl_usd": -11.62,
+    "spec": {
+      "conf": 0.65,
+      "w_start": 80,
+      "w_end": 5,
+      "max_price": 1.0
+    }
+  },
+  "ptb_defer_rollover_bot.py": {
+    "total_trades": 107,
+    "wins": 94,
+    "losses": 13,
+    "unresolved": 0,
+    "win_rate_pct": 87.9,
+    "volume_usd": 110.26,
+    "pnl_usd": -10.95,
+    "spec": {
+      "conf": 0.55,
+      "w_start": 8,
+      "w_end": 2,
+      "max_price": 1.0
+    }
+  },
+  "pure_close_double_stake_bot.py": {
+    "total_trades": 107,
+    "wins": 94,
+    "losses": 13,
+    "unresolved": 0,
+    "win_rate_pct": 87.9,
+    "volume_usd": 110.26,
+    "pnl_usd": -10.95,
+    "spec": {
+      "conf": 0.55,
+      "w_start": 8,
+      "w_end": 2,
+      "max_price": 1.0
+    }
+  },
+  "pure_close_rollover_bot.py": {
+    "total_trades": 107,
+    "wins": 94,
+    "losses": 13,
+    "unresolved": 0,
+    "win_rate_pct": 87.9,
+    "volume_usd": 110.26,
+    "pnl_usd": -10.95,
+    "spec": {
+      "conf": 0.55,
+      "w_start": 8,
+      "w_end": 2,
+      "max_price": 1.0
+    }
+  },
+  "pure_close_single_stake_bot.py": {
+    "total_trades": 107,
+    "wins": 94,
+    "losses": 13,
+    "unresolved": 0,
+    "win_rate_pct": 87.9,
+    "volume_usd": 110.26,
+    "pnl_usd": -10.95,
+    "spec": {
+      "conf": 0.55,
+      "w_start": 8,
+      "w_end": 2,
+      "max_price": 1.0
+    }
+  },
+  "rollover_winnings_bot.py": {
+    "total_trades": 103,
+    "wins": 88,
+    "losses": 15,
+    "unresolved": 0,
+    "win_rate_pct": 85.4,
+    "volume_usd": 107.25,
+    "pnl_usd": -11.62,
+    "spec": {
+      "conf": 0.65,
+      "w_start": 80,
+      "w_end": 5,
+      "max_price": 1.0
+    }
+  },
+  "smartbot.py": {
+    "total_trades": 103,
+    "wins": 88,
+    "losses": 15,
+    "unresolved": 0,
+    "win_rate_pct": 85.4,
+    "volume_usd": 107.25,
+    "pnl_usd": -11.62,
+    "spec": {
+      "conf": 0.65,
+      "w_start": 80,
+      "w_end": 5,
+      "max_price": 1.0
+    }
+  },
+  "smart_scaling_bot.py": {
+    "total_trades": 103,
+    "wins": 88,
+    "losses": 15,
+    "unresolved": 0,
+    "win_rate_pct": 85.4,
+    "volume_usd": 107.25,
+    "pnl_usd": -11.62,
+    "spec": {
+      "conf": 0.65,
+      "w_start": 80,
+      "w_end": 5,
+      "max_price": 1.0
+    }
+  },
+  "staggered_hybrid_sprint.py": {
+    "total_trades": 103,
+    "wins": 88,
+    "losses": 15,
+    "unresolved": 0,
+    "win_rate_pct": 85.4,
+    "volume_usd": 107.25,
+    "pnl_usd": -11.62,
+    "spec": {
+      "conf": 0.65,
+      "w_start": 80,
+      "w_end": 5,
+      "max_price": 1.0
+    }
+  },
+  "trend_catcher_rollover_bot.py": {
+    "total_trades": 7,
+    "wins": 2,
+    "losses": 5,
+    "unresolved": 0,
+    "win_rate_pct": 28.6,
+    "volume_usd": 8.2,
+    "pnl_usd": -3.08,
+    "spec": {
+      "conf": 0.65,
+      "w_start": 80,
+      "w_end": 15,
+      "max_price": 0.9
+    }
+  },
+  "triple_close_scaling_bot.py": {
+    "total_trades": 95,
+    "wins": 85,
+    "losses": 10,
+    "unresolved": 0,
+    "win_rate_pct": 89.5,
+    "volume_usd": 97.94,
+    "pnl_usd": -8.55,
+    "spec": {
+      "conf": 0.65,
+      "w_start": 12,
+      "w_end": 5,
+      "max_price": 1.0
+    }
+  },
+  "triple_hybrid_scaling_bot.py": {
+    "total_trades": 103,
+    "wins": 88,
+    "losses": 15,
+    "unresolved": 0,
+    "win_rate_pct": 85.4,
+    "volume_usd": 107.25,
+    "pnl_usd": -11.62,
+    "spec": {
+      "conf": 0.65,
+      "w_start": 80,
+      "w_end": 5,
+      "max_price": 1.0
+    }
+  }
+}

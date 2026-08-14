@@ -1,0 +1,206 @@
+{
+  "50_percent_trading_bot.py": {
+    "confidence_threshold": 0.65,
+    "bet_window_start": 80,
+    "bet_window_end": 5,
+    "max_price_limit": null
+  },
+  "capped_triple_hybrid_bot.py": {
+    "confidence_threshold": 0.65,
+    "bet_window_start": 80,
+    "bet_window_end": 5,
+    "max_price_limit": null
+  },
+  "close_to_market_bot.py": {
+    "confidence_threshold": 0.65,
+    "bet_window_start": 80,
+    "bet_window_end": 5,
+    "max_price_limit": 0.9
+  },
+  "close_to_market_offpeak_rollover_bot.py": {
+    "confidence_threshold": 0.65,
+    "bet_window_start": 25,
+    "bet_window_end": 5,
+    "max_price_limit": 0.75
+  },
+  "close_to_market_rollover_bot.py": {
+    "confidence_threshold": 0.65,
+    "bet_window_start": 12,
+    "bet_window_end": 5,
+    "max_price_limit": 0.9
+  },
+  "combined_double_stake_bot.py": {
+    "confidence_threshold": 0.85,
+    "bet_window_start": 8,
+    "bet_window_end": 2,
+    "max_price_limit": null
+  },
+  "combined_single_stake_bot.py": {
+    "confidence_threshold": 0.85,
+    "bet_window_start": 8,
+    "bet_window_end": 2,
+    "max_price_limit": null
+  },
+  "dual_streak_scaling_bot.py": {
+    "confidence_threshold": 0.65,
+    "bet_window_start": 80,
+    "bet_window_end": 5,
+    "max_price_limit": null
+  },
+  "five_mins_hybrid_sprint.py": {
+    "confidence_threshold": 0.65,
+    "bet_window_start": 80,
+    "bet_window_end": 5,
+    "max_price_limit": null
+  },
+  "generate_credentials.py": {
+    "confidence_threshold": null,
+    "bet_window_start": null,
+    "bet_window_end": null,
+    "max_price_limit": null
+  },
+  "guarded_hybrid_sprint.py": {
+    "confidence_threshold": 0.65,
+    "bet_window_start": 80,
+    "bet_window_end": 5,
+    "max_price_limit": null
+  },
+  "hybrid_sprint_bot.py": {
+    "confidence_threshold": 0.65,
+    "bet_window_start": 80,
+    "bet_window_end": 5,
+    "max_price_limit": null
+  },
+  "latency_arb_bot.py": {
+    "confidence_threshold": null,
+    "bet_window_start": null,
+    "bet_window_end": null,
+    "max_price_limit": null
+  },
+  "off_peak_5mins_hybrid_sprint.py": {
+    "confidence_threshold": 0.65,
+    "bet_window_start": 25,
+    "bet_window_end": 5,
+    "max_price_limit": null
+  },
+  "peak_hours_run.py": {
+    "confidence_threshold": 0.65,
+    "bet_window_start": 80,
+    "bet_window_end": 5,
+    "max_price_limit": null
+  },
+  "polybot.py": {
+    "confidence_threshold": null,
+    "bet_window_start": null,
+    "bet_window_end": null,
+    "max_price_limit": null
+  },
+  "probe_close_timing.py": {
+    "confidence_threshold": 0.65,
+    "bet_window_start": 30,
+    "bet_window_end": 5,
+    "max_price_limit": null
+  },
+  "ptb_defer_rollover_bot.py": {
+    "confidence_threshold": 0.55,
+    "bet_window_start": 8,
+    "bet_window_end": 2,
+    "max_price_limit": null
+  },
+  "pure_close_double_stake_bot.py": {
+    "confidence_threshold": 0.55,
+    "bet_window_start": 8,
+    "bet_window_end": 2,
+    "max_price_limit": null
+  },
+  "pure_close_rollover_bot.py": {
+    "confidence_threshold": 0.55,
+    "bet_window_start": 8,
+    "bet_window_end": 2,
+    "max_price_limit": null
+  },
+  "pure_close_single_stake_bot.py": {
+    "confidence_threshold": 0.55,
+    "bet_window_start": 8,
+    "bet_window_end": 2,
+    "max_price_limit": null
+  },
+  "query_history.py": {
+    "confidence_threshold": null,
+    "bet_window_start": null,
+    "bet_window_end": null,
+    "max_price_limit": null
+  },
+  "rollover_winnings_bot.py": {
+    "confidence_threshold": 0.65,
+    "bet_window_start": 80,
+    "bet_window_end": 5,
+    "max_price_limit": null
+  },
+  "smartbot.py": {
+    "confidence_threshold": null,
+    "bet_window_start": null,
+    "bet_window_end": null,
+    "max_price_limit": null
+  },
+  "smart_scaling_bot.py": {
+    "confidence_threshold": 0.65,
+    "bet_window_start": 80,
+    "bet_window_end": 5,
+    "max_price_limit": null
+  },
+  "staggered_hybrid_sprint.py": {
+    "confidence_threshold": 0.65,
+    "bet_window_start": 80,
+    "bet_window_end": 5,
+    "max_price_limit": null
+  },
+  "testfromclaude.py": {
+    "confidence_threshold": null,
+    "bet_window_start": null,
+    "bet_window_end": null,
+    "max_price_limit": null
+  },
+  "test_bet_timing.py": {
+    "confidence_threshold": null,
+    "bet_window_start": null,
+    "bet_window_end": null,
+    "max_price_limit": null
+  },
+  "thispy.py": {
+    "confidence_threshold": 0.65,
+    "bet_window_start": 30,
+    "bet_window_end": 5,
+    "max_price_limit": null
+  },
+  "track_ws.py": {
+    "confidence_threshold": null,
+    "bet_window_start": null,
+    "bet_window_end": null,
+    "max_price_limit": null
+  },
+  "trend_catcher_rollover_bot.py": {
+    "confidence_threshold": 0.65,
+    "bet_window_start": 80,
+    "bet_window_end": 15,
+    "max_price_limit": 0.9
+  },
+  "triple_close_scaling_bot.py": {
+    "confidence_threshold": 0.65,
+    "bet_window_start": 12,
+    "bet_window_end": 5,
+    "max_price_limit": null
+  },
+  "triple_hybrid_scaling_bot.py": {
+    "confidence_threshold": 0.65,
+    "bet_window_start": 80,
+    "bet_window_end": 5,
+    "max_price_limit": null
+  },
+  "webconsole.py": {
+    "confidence_threshold": null,
+    "bet_window_start": null,
+    "bet_window_end": null,
+    "max_price_limit": null
+  }
+}

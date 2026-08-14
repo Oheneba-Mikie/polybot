@@ -238,7 +238,7 @@ def check_resolution(slug):
 def reconstruct_stake_on_startup(clob_client):
     try:
         from py_clob_client_v2.clob_types import TradeParams
-        params = TradeParams(maker_address=clob_client.funder)
+        params = TradeParams(maker_address=POLYMARKET_ADDRESS)
         trades = clob_client.get_trades(params)
         if not trades:
             print("  ℹ️  No previous trades found on API. Starting stake: $1.00 pUSD")

@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Black-Scholes Latency Arbitrage Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Inter', sans-serif; background: #0b0e14; color: #e1e7ec; padding: 24px; }
+        .header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 20px; border-bottom: 1px solid #1e2638; margin-bottom: 24px; }
+        .header h1 { font-size: 24px; font-weight: 700; color: #38ef7d; }
+        .status-badge { font-size: 13px; font-weight: 600; padding: 6px 14px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .badge-live { background: rgba(56, 239, 125, 0.15); color: #38ef7d; border: 1px solid #38ef7d; }
+        .badge-paper { background: rgba(255, 193, 7, 0.15); color: #ffc107; border: 1px solid #ffc107; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 24px; }
+        .card { background: #131924; border: 1px solid #1e2638; border-radius: 12px; padding: 20px; }
+        .card-label { font-size: 12px; color: #7f8c8d; text-transform: uppercase; font-weight: 600; margin-bottom: 8px; }
+        .card-value { font-size: 22px; font-weight: 700; color: #ffffff; }
+        .card-sub { font-size: 12px; color: #38ef7d; margin-top: 4px; }
+        .section-title { font-size: 16px; font-weight: 600; margin-bottom: 12px; color: #94a3b8; }
+        .logs-container { background: #07090e; border: 1px solid #1e2638; border-radius: 12px; padding: 16px; font-family: monospace; font-size: 13px; height: 350px; overflow-y: auto; color: #a0aec0; }
+        .log-line { margin-bottom: 4px; line-height: 1.5; }
+        .table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+        .table th, .table td { padding: 12px; text-align: left; border-bottom: 1px solid #1e2638; font-size: 14px; }
+        .table th { color: #7f8c8d; font-size: 12px; text-transform: uppercase; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div>
+            <h1>Polymarket Chainlink Latency Arbitrage</h1>
+            <div style="font-size: 13px; color: #64748b; margin-top: 4px;">5-Share Micro-Limit Orders ($0.04 - $0.06 Ask Range)</div>
+        </div>
+        <div id="mode-badge" class="status-badge badge-live">LIVE TRADING</div>
+    </div>
+
+    <div class="grid">
+        <div class="card">
+            <div class="card-label">Spot BTC (Chainlink)</div>
+            <div class="card-value" id="spot-btc">$0.00</div>
+            <div class="card-sub" id="ptb-diff">PTB: --</div>
+        </div>
+        <div class="card">
+            <div class="card-label">Current 5M Market</div>
+            <div class="card-value" id="current-slug" style="font-size: 16px;">--</div>
+            <div class="card-sub" id="bot-status">Status: Initializing</div>
+        </div>
+        <div class="card">
+            <div class="card-label">Total Trades Executed</div>
+            <div class="card-value" id="total-trades">0</div>
+            <div class="card-sub">Budget: $0.35 USDC</div>
+        </div>
+        <div class="card">
+            <div class="card-label">Last Arbitrage Signal</div>
+            <div class="card-value" id="last-signal" style="font-size: 15px; color: #ffc107;">None</div>
+        </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+        <div>
+            <div class="section-title">Live Execution Trade Log</div>
+            <div class="card" style="padding: 0;">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>Side</th>
+                            <th>Ask Price</th>
+                            <th>Total Cost</th>
+                            <th>Order ID</th>
+                        </tr>
+                    </thead>
+                    <tbody id="trade-history">
+                        <tr><td colspan="5" style="color: #64748b; text-align: center;">No trades recorded yet</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div>
+            <div class="section-title">System Console Logs</div>
+            <div class="logs-container" id="logs">
+                <div class="log-line">[SYSTEM] Initializing console logs...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function updateDashboard() {
+            fetch('/api/status')
+                .then(r => r.json())
+                .then(data => {
+                    document.getElementById('mode-badge').innerText = data.mode;
+                    document.getElementById('spot-btc').innerText = data.spot_btc ? '$' + data.spot_btc.toLocaleString(undefined, {minimumFractionDigits: 2}) : 'Connecting...';
+                    document.getElementById('ptb-diff').innerText = data.ptb ? 'PTB: $' + data.ptb.toLocaleString(undefined, {minimumFractionDigits: 2}) : 'PTB: --';
+                    document.getElementById('current-slug').innerText = data.current_slug || '--';
+                    document.getElementById('bot-status').innerText = 'Status: ' + data.status;
+                    document.getElementById('total-trades').innerText = data.total_trades || 0;
+                    document.getElementById('last-signal').innerText = data.last_signal || 'None';
+
+                    // Update Logs
+                    const logsDiv = document.getElementById('logs');
+                    if (data.logs && data.logs.length > 0) {
+                        logsDiv.innerHTML = data.logs.map(l => `<div class="log-line">${l}</div>`).join('');
+                        logsDiv.scrollTop = logsDiv.scrollHeight;
+                    }
+
+                    // Update Trade History
+                    const histTbody = document.getElementById('trade-history');
+                    if (data.history && data.history.length > 0) {
+                        histTbody.innerHTML = data.history.slice().reverse().map(h => `
+                            <tr>
+                                <td>${h.time}</td>
+                                <td style="color: ${h.side === 'UP' ? '#38ef7d' : '#ff4e50'}; font-weight: bold;">${h.side}</td>
+                                <td>$${h.price.toFixed(4)}</td>
+                                <td>$${h.cost.toFixed(2)}</td>
+                                <td style="font-family: monospace; font-size: 11px;">${h.order_id ? h.order_id.substring(0, 14) + '...' : 'Filled'}</td>
+                            </tr>
+                        `).join('');
+                    }
+                })
+                .catch(e => console.error(e));
+        }
+        setInterval(updateDashboard, 2000);
+        updateDashboard();
+    </script>
+</body>
+</html>

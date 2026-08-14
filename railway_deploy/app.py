@@ -119,7 +119,10 @@ def load_state():
     return False
 
 # ── Web Server Setup ────────────────────────────────────────────────────────────
-app = Flask(__name__)
+import logging
+template_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates')
+app = Flask(__name__, template_folder=template_dir)
+logging.getLogger('werkzeug').setLevel(logging.ERROR)
 
 @app.route('/')
 def home():
@@ -373,6 +376,10 @@ def run_probe_phase(ws: WSFeed, ptb: float, w_end: int, market: dict, clob_clien
                 probes_done.add(mark)
                 up_ask,   _ = probe_book(market["up_id"])
                 down_ask, _ = probe_book(market["down_id"])
+
+                up_str = f"${up_ask:.4f}" if up_ask is not None else "NONE"
+                down_str = f"${down_ask:.4f}" if down_ask is not None else "NONE"
+                log_info(f"► PROBE T-{mark:>2}s  UP={up_str:<7}  DOWN={down_str:<7}  BTC=${last_price:,.2f}")
 
                 current_move = last_price - ptb
                 current_dir = "UP" if current_move > 0 else "DOWN"

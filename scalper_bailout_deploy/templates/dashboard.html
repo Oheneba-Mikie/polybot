@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>⚡ Scalper & Emergency Bailout Bot (Bot 4)</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg-color: #0d0e15;
+            --card-bg: #151824;
+            --accent-purple: #8b5cf6;
+            --accent-cyan: #06b6d4;
+            --text-main: #f3f4f6;
+            --text-muted: #9ca3af;
+            --green-glow: #10b981;
+            --red-glow: #ef4444;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            margin-bottom: 25px;
+        }
+
+        .title-area h1 {
+            font-size: 24px;
+            font-weight: 700;
+            margin: 0;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .badge-purple {
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(6, 182, 212, 0.2));
+            border: 1px solid var(--accent-purple);
+            color: #c084fc;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .stat-card {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            padding: 18px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 6px;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: 700;
+        }
+
+        .chart-container {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            margin-bottom: 25px;
+            position: relative;
+        }
+
+        .logs-container {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .logs-box {
+            background-color: #090a0f;
+            border-radius: 8px;
+            padding: 15px;
+            font-family: monospace;
+            font-size: 13px;
+            height: 250px;
+            overflow-y: auto;
+            color: #a7f3d0;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="title-area">
+            <h1>⚡ 100% Sweeping Wave Scalper <span class="badge-purple">BOT #4</span></h1>
+        </div>
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <button id="pauseBtn" onclick="togglePause()" style="background: linear-gradient(135deg, #ef4444, #dc2626); color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 14px; box-shadow: 0 4px 14px rgba(239, 68, 68, 0.4); transition: all 0.2s;">
+                ⏸️ PAUSE BOT
+            </button>
+            <div class="badge-purple" id="netProfitBadge">NET P&L: LOADING...</div>
+        </div>
+    </div>
+
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-label">Live USDC Balance</div>
+            <div class="stat-value" id="valBalance" style="color: #60a5fa;">$0.00</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Current Stake</div>
+            <div class="stat-value" id="valStake">$1.00</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Wins / Bailouts</div>
+            <div class="stat-value" id="valWinsBailouts" style="color: var(--green-glow);">0 / 0</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Rescued Cash</div>
+            <div class="stat-value" id="valRescued" style="color: #a78bfa;">$0.00</div>
+        </div>
+    </div>
+
+    <div class="chart-container">
+        <h3 style="margin-top:0; font-size:16px; color: var(--text-muted);">📊 Real-Time Blockchain Equity Curve (GMT)</h3>
+        <canvas id="pnlChart" height="90"></canvas>
+    </div>
+
+    <div class="logs-container">
+        <h3 style="margin-top:0; font-size:16px; color: var(--text-muted);">📜 Engine Terminal Logs</h3>
+        <div class="logs-box" id="logsBox">Waiting for engine logs...</div>
+    </div>
+
+    <script>
+        let pnlChart = null;
+
+        function initChart() {
+            const ctx = document.getElementById('pnlChart').getContext('2d');
+            const gradient = ctx.createLinearGradient(0, 0, 0, 300);
+            gradient.addColorStop(0, 'rgba(139, 92, 246, 0.35)');
+            gradient.addColorStop(1, 'rgba(139, 92, 246, 0.0)');
+
+            pnlChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Wallet Equity (USDC)',
+                        data: [],
+                        borderColor: '#8b5cf6',
+                        borderWidth: 2.5,
+                        backgroundColor: gradient,
+                        fill: true,
+                        tension: 0.3,
+                        pointBackgroundColor: '#c084fc',
+                        pointRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#9ca3af' } },
+                        y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#9ca3af' } }
+                    },
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+
+        async function togglePause() {
+            try {
+                const r = await fetch('/api/toggle_pause', { method: 'POST' });
+                const d = await r.json();
+                updatePauseUI(d.paused);
+            } catch(e) { console.error(e); }
+        }
+
+        function updatePauseUI(isPaused) {
+            const btn = document.getElementById('pauseBtn');
+            if (isPaused) {
+                if (btn) {
+                    btn.innerText = '▶️ RESUME BOT';
+                    btn.style.background = 'linear-gradient(135deg, #10b981, #059669)';
+                    btn.style.boxShadow = '0 4px 14px rgba(16, 185, 129, 0.4)';
+                }
+            } else {
+                if (btn) {
+                    btn.innerText = '⏸️ PAUSE BOT';
+                    btn.style.background = 'linear-gradient(135deg, #ef4444, #dc2626)';
+                    btn.style.boxShadow = '0 4px 14px rgba(239, 68, 68, 0.4)';
+                }
+            }
+        }
+
+        async function updateStatus() {
+            try {
+                const res = await fetch('/api/status');
+                const d = await res.json();
+
+                updatePauseUI(d.paused);
+
+                document.getElementById('valBalance').innerText = `$${d.balance ? d.balance.toFixed(2) : '0.00'}`;
+                document.getElementById('valStake').innerText = `$${d.stake ? d.stake.toFixed(2) : '1.00'}`;
+                document.getElementById('valWinsBailouts').innerText = `${d.wins || 0} / ${d.bailouts || 0}`;
+                document.getElementById('valRescued').innerText = `$${d.rescued_cash ? d.rescued_cash.toFixed(2) : '0.00'}`;
+
+                if (d.logs) {
+                    const lb = document.getElementById('logsBox');
+                    lb.innerText = d.logs.join('\n');
+                    lb.scrollTop = lb.scrollHeight;
+                }
+
+                if (d.history && pnlChart) {
+                    let labels = [];
+                    let points = [];
+                    let runBal = 7.18;
+
+                    d.history.forEach(h => {
+                        labels.push(h.time);
+                        if (h.type === 'TRADE') runBal -= h.amount;
+                        else if (h.type === 'REDEEM') runBal += h.amount;
+                        points.push(parseFloat(runBal.toFixed(2)));
+                    });
+
+                    pnlChart.data.labels = labels;
+                    pnlChart.data.datasets[0].data = points;
+                    pnlChart.update();
+
+                    const net = runBal - 7.18;
+                    const badge = document.getElementById('netProfitBadge');
+                    badge.innerText = `NET P&L: ${net >= 0 ? '+' : ''}$${net.toFixed(2)} USDC`;
+                    badge.style.color = net >= 0 ? '#10b981' : '#ef4444';
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        initChart();
+        updateStatus();
+        setInterval(updateStatus, 3000);
+    </script>
+</body>
+</html>

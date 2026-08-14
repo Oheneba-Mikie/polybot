@@ -782,9 +782,14 @@ def main():
             bal = 5.05
             print("  ⚠️ Could not fetch balance. Defaulting starting stake reference to $5.00 pUSD")
             
+        user_defined_starting_stake = False
         try:
             user_in = input(f"  👉 Enter starting stake [Default ${default_start:.2f}]: ").strip()
-            starting_stake = float(user_in) if user_in else default_start
+            if user_in:
+                starting_stake = float(user_in)
+                user_defined_starting_stake = True
+            else:
+                starting_stake = default_start
         except ValueError:
             starting_stake = default_start
 
@@ -792,11 +797,16 @@ def main():
         if bal < 10.00:
             # Phase 1: Sprint Mode
             print("  🏃 Wallet < $10.00: Running in Phase 1 (Sprint 100% Wallet)")
-            sprint_stake, sprint_wins = reconstruct_sprint_on_startup(clob_client, starting_stake)
+            if user_defined_starting_stake:
+                print(f"  ℹ️ User defined starting stake of ${starting_stake:.2f} pUSD. Skipping API reconstruction...")
+                sprint_stake = starting_stake
+                sprint_wins = 0
+            else:
+                sprint_stake, sprint_wins = reconstruct_sprint_on_startup(clob_client, starting_stake)
         else:
             # Phase 2: Dual Streak mode
             print("  🛡️ Wallet >= $10.00: Running in Phase 2 (Safe Dual 50/50 Split)")
-            split_stake = max(1.00, round((bal - 0.10) / 2.0, 2))
+            split_stake = max(1.00, round((bal - 0.15) / 2.0, 2)) # Use 15c fee buffer
             streak_1_stake = split_stake
             streak_2_stake = split_stake
     else:
@@ -893,11 +903,14 @@ def main():
                     bal = new_bal
                     phase = 1 if bal < 10.00 else 2
                     if phase == 1:
-                        # Sprint Mode always stakes 100% of the active wallet balance
-                        sprint_stake = max(1.00, round(bal - 0.05, 2))
+                        if sprint_wins == 0:
+                            if user_defined_starting_stake:
+                                sprint_stake = starting_stake
+                            else:
+                                sprint_stake = max(1.00, round(bal - 0.15, 2)) # Use 15c fee buffer
                     else:
                         # Safe Compounding Mode updates stakes for streaks starting fresh (0 wins)
-                        split_stake = max(1.00, round((bal - 0.10) / 2.0, 2))
+                        split_stake = max(1.00, round((bal - 0.15) / 2.0, 2)) # Use 15c fee buffer
                         if streak_1_wins == 0:
                             streak_1_stake = split_stake
                         if streak_2_wins == 0:

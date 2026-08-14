@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PTB-Defer Guard Bot — Cloud Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg-color: #080c14;
+            --card-bg: rgba(15, 23, 42, 0.75);
+            --card-border: rgba(255, 255, 255, 0.1);
+            --accent-green: #10b981;
+            --accent-green-glow: #34d399;
+            --accent-blue: #3b82f6;
+            --accent-red: #ef4444;
+            --accent-yellow: #f59e0b;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Outfit', sans-serif; }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            min-height: 100vh;
+            padding: 2rem;
+            background-image: 
+                radial-gradient(circle at 10% 10%, rgba(245, 158, 11, 0.15) 0%, transparent 45%),
+                radial-gradient(circle at 90% 90%, rgba(16, 185, 129, 0.15) 0%, transparent 45%);
+        }
+
+        .container { max-width: 1280px; margin: 0 auto; }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1.25rem;
+            border-bottom: 1px solid var(--card-border);
+        }
+
+        .logo-title h1 { font-size: 2rem; font-weight: 800; background: linear-gradient(135deg, #fbbf24, #34d399); -webkit-background-clip: text; -webkit-text-fill-color: transparent; letter-spacing: -0.02em; }
+        .logo-title p { color: var(--text-muted); font-size: 0.95rem; margin-top: 0.25rem; }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.6rem;
+            padding: 0.6rem 1.2rem;
+            border-radius: 9999px;
+            background: rgba(245, 158, 11, 0.15);
+            border: 1px solid rgba(245, 158, 11, 0.35);
+            color: #fbbf24;
+            font-weight: 700;
+            font-size: 0.9rem;
+            letter-spacing: 0.03em;
+        }
+        .pulse { width: 10px; height: 10px; border-radius: 50%; background: var(--accent-yellow); box-shadow: 0 0 12px var(--accent-yellow); animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(1.25); } 100% { opacity: 1; transform: scale(1); } }
+
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
+
+        .card {
+            background: var(--card-bg);
+            backdrop-filter: blur(16px);
+            border: 1px solid var(--card-border);
+            border-radius: 1.25rem;
+            padding: 1.5rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+        }
+
+        .card-label { color: var(--text-muted); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700; }
+        .card-value { font-size: 2.25rem; font-weight: 800; margin-top: 0.4rem; letter-spacing: -0.02em; }
+        .card-subtext { color: var(--text-muted); font-size: 0.85rem; margin-top: 0.35rem; }
+
+        .val-green { color: var(--accent-green-glow); text-shadow: 0 0 20px rgba(16, 185, 129, 0.3); }
+        .val-blue { color: #60a5fa; }
+        .val-yellow { color: #fbbf24; }
+
+        .chart-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(16px);
+            border: 1px solid var(--card-border);
+            border-radius: 1.25rem;
+            padding: 1.75rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+        }
+
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.25rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--card-border);
+        }
+        .chart-title { font-weight: 700; font-size: 1.1rem; color: var(--text-main); display: flex; align-items: center; gap: 0.5rem; }
+
+        .terminal-card {
+            background: rgba(6, 9, 15, 0.95);
+            border: 1px solid var(--card-border);
+            border-radius: 1.25rem;
+            padding: 1.5rem;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+        }
+
+        .terminal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid var(--card-border);
+        }
+        .terminal-title { font-weight: 700; font-size: 1rem; color: var(--text-muted); }
+
+        .terminal-body {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            line-height: 1.6;
+            color: #e2e8f0;
+            height: 320px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            background: #030712;
+            padding: 1.25rem;
+            border-radius: 0.75rem;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.2); border-radius: 3px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo-title">
+                <h1>PTB Defer Guard Rail Bot</h1>
+                <p>Polymarket BTC 5m Cloud Engine — Protected by Gap, Consensus & Momentum Rules</p>
+            </div>
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <button id="pauseBtn" onclick="togglePause()" style="background: linear-gradient(135deg, #ef4444, #dc2626); color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 14px; box-shadow: 0 4px 14px rgba(239, 68, 68, 0.4); transition: all 0.2s;">
+                    ⏸️ PAUSE BOT
+                </button>
+                <div class="status-badge">
+                    <div class="pulse"></div>
+                    <span id="bot-status">ENGINE ACTIVE</span>
+                </div>
+            </div>
+        </header>
+
+        <div class="grid">
+            <div class="card">
+                <div class="card-label">Live Wallet Balance</div>
+                <div class="card-value val-green" id="wallet-balance">$0.00</div>
+                <div class="card-subtext">USDC Collateral on Polygon</div>
+            </div>
+            <div class="card">
+                <div class="card-label">Current Stake</div>
+                <div class="card-value val-blue" id="current-stake">$1.00</div>
+                <div class="card-subtext" id="stake-mode">Double Stake Mode</div>
+            </div>
+            <div class="card">
+                <div class="card-label">Active Streak</div>
+                <div class="card-value val-yellow" id="win-streak">0 WINS</div>
+                <div class="card-subtext" id="total-pnl">Total Wins: 0 | Losses: 0</div>
+            </div>
+            <div class="card">
+                <div class="card-label">Deferred Windows</div>
+                <div class="card-value" id="protected-count">0</div>
+                <div class="card-subtext">Tight gap (< $25.00) deferred to T-2s</div>
+            </div>
+        </div>
+
+        <!-- REAL BLOCKCHAIN PnL & EQUITY TRAJECTORY CHART -->
+        <div class="chart-card">
+            <div class="chart-header">
+                <div class="chart-title">
+                    <span>📈</span> LIVE WALLET EQUITY & P&L TRAJECTORY (REAL BLOCKCHAIN ACTIVITY)
+                </div>
+                <div style="font-size:0.85rem; background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.3); padding: 0.3rem 0.8rem; border-radius: 9999px; color: #fbbf24; font-weight: 700;" id="pnl-summary">
+                    NET EQUITY CURVE
+                </div>
+            </div>
+            <div style="height: 320px; position: relative;">
+                <canvas id="pnlChart"></canvas>
+            </div>
+        </div>
+
+        <div class="terminal-card">
+            <div class="terminal-header">
+                <div class="terminal-title">LIVE BOT TERMINAL LOGS</div>
+                <div style="font-size:0.8rem; color:var(--text-muted);" id="last-update">Updating...</div>
+            </div>
+            <div class="terminal-body" id="logs-container">Initializing live terminal stream...</div>
+        </div>
+    </div>
+
+    <script>
+        let pnlChart = null;
+
+        function initChart() {
+            const ctx = document.getElementById('pnlChart').getContext('2d');
+            const gradient = ctx.createLinearGradient(0, 0, 0, 320);
+            gradient.addColorStop(0, 'rgba(245, 158, 11, 0.45)');
+            gradient.addColorStop(1, 'rgba(245, 158, 11, 0.02)');
+
+            pnlChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Wallet Balance ($)',
+                        data: [],
+                        borderColor: '#f59e0b',
+                        borderWidth: 3.5,
+                        backgroundColor: gradient,
+                        fill: true,
+                        tension: 0.35,
+                        pointBackgroundColor: '#fbbf24',
+                        pointBorderColor: '#080c14',
+                        pointBorderWidth: 2,
+                        pointRadius: 5,
+                        pointHoverRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: 'rgba(6, 9, 15, 0.95)',
+                            titleColor: '#94a3b8',
+                            titleFont: { family: 'Outfit', size: 12 },
+                            bodyColor: '#fbbf24',
+                            bodyFont: { family: 'Outfit', weight: 'bold', size: 15 },
+                            borderColor: 'rgba(255,255,255,0.15)',
+                            borderWidth: 1,
+                            padding: 12,
+                            displayColors: false,
+                            callbacks: {
+                                label: function(context) {
+                                    const meta = context.dataset.metaDetails ? context.dataset.metaDetails[context.dataIndex] : null;
+                                    let str = ' Balance: $' + context.parsed.y.toFixed(2);
+                                    if (meta) {
+                                        str += ' (' + meta.type + ': ' + (meta.type === 'REDEEM' ? '+' : '-') + '$' + meta.amount.toFixed(2) + ')';
+                                    }
+                                    return str;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: { color: 'rgba(255, 255, 255, 0.04)' },
+                            ticks: { color: '#94a3b8', font: { family: 'Outfit', size: 11 } }
+                        },
+                        y: {
+                            grid: { color: 'rgba(255, 255, 255, 0.04)' },
+                            ticks: {
+                                color: '#94a3b8',
+                                font: { family: 'Outfit', size: 11 },
+                                callback: function(value) { return '$' + value.toFixed(2); }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        async function togglePause() {
+            try {
+                const r = await fetch('/api/toggle_pause', { method: 'POST' });
+                const d = await r.json();
+                updatePauseUI(d.paused);
+            } catch(e) { console.error(e); }
+        }
+
+        function updatePauseUI(isPaused) {
+            const btn = document.getElementById('pauseBtn');
+            const statusSpan = document.getElementById('bot-status');
+            if (isPaused) {
+                if (btn) {
+                    btn.innerText = '▶️ RESUME BOT';
+                    btn.style.background = 'linear-gradient(135deg, #10b981, #059669)';
+                    btn.style.boxShadow = '0 4px 14px rgba(16, 185, 129, 0.4)';
+                }
+                if (statusSpan) statusSpan.innerText = 'PAUSED';
+            } else {
+                if (btn) {
+                    btn.innerText = '⏸️ PAUSE BOT';
+                    btn.style.background = 'linear-gradient(135deg, #ef4444, #dc2626)';
+                    btn.style.boxShadow = '0 4px 14px rgba(239, 68, 68, 0.4)';
+                }
+                if (statusSpan) statusSpan.innerText = 'ENGINE ACTIVE';
+            }
+        }
+
+        async function fetchStatus() {
+            try {
+                const res = await fetch('/api/status');
+                const data = await res.json();
+                
+                updatePauseUI(data.paused);
+
+                const liveBal = data.balance || 7.60;
+                document.getElementById('wallet-balance').innerText = '$' + liveBal.toFixed(2);
+                document.getElementById('current-stake').innerText = '$' + (data.stake || 1).toFixed(2);
+                document.getElementById('stake-mode').innerText = data.double_stake ? 'Double Stake Mode (2 x $' + ((data.stake || 1)/2).toFixed(2) + ')' : 'Single Stake Mode';
+                document.getElementById('win-streak').innerText = (data.streak || 0) + ' WINS';
+                document.getElementById('total-pnl').innerText = 'Total Wins: ' + (data.wins || 0) + ' | Losses: ' + (data.losses || 0);
+                document.getElementById('protected-count').innerText = data.deferred || 0;
+                document.getElementById('logs-container').innerText = data.logs || 'Waiting for logs...';
+                document.getElementById('last-update').innerText = 'Updated: ' + new Date().toLocaleTimeString();
+                
+                const container = document.getElementById('logs-container');
+                container.scrollTop = container.scrollHeight;
+
+                // Reconstruct full equity curve from blockchain activity
+                if (data.history && data.history.length > 0 && pnlChart) {
+                    let historyData = [];
+                    for (let i = 0; i < data.history.length; i++) {
+                        historyData.push(data.history[i]);
+                    }
+
+                    let totalChange = 0;
+                    for (let act of historyData) {
+                        if (act.type === 'REDEEM') totalChange += act.amount;
+                        if (act.type === 'TRADE') totalChange -= act.amount;
+                    }
+
+                    let runningBal = Math.max(2.00, liveBal - totalChange);
+                    let labels = [];
+                    let values = [];
+                    let metaDetails = [];
+
+                    for (let act of historyData) {
+                        if (act.type === 'REDEEM') runningBal += act.amount;
+                        if (act.type === 'TRADE') runningBal -= act.amount;
+
+                        labels.push(act.time);
+                        values.push(Math.max(0.1, runningBal));
+                        metaDetails.push(act);
+                    }
+
+                    labels.push(new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) + ' GMT');
+                    values.push(liveBal);
+                    metaDetails.push({type: 'CURRENT', amount: 0});
+
+                    pnlChart.data.labels = labels;
+                    pnlChart.data.datasets[0].data = values;
+                    pnlChart.data.datasets[0].metaDetails = metaDetails;
+
+                    const firstVal = values[0] || liveBal;
+                    const netDiff = liveBal - firstVal;
+                    if (netDiff >= 0) {
+                        pnlChart.data.datasets[0].borderColor = '#f59e0b';
+                        document.getElementById('pnl-summary').innerText = 'NET PROFIT: +$' + netDiff.toFixed(2);
+                        document.getElementById('pnl-summary').style.color = '#fbbf24';
+                    } else {
+                        pnlChart.data.datasets[0].borderColor = '#ef4444';
+                        document.getElementById('pnl-summary').innerText = 'DRAWDOWN: -$ ' + Math.abs(netDiff).toFixed(2);
+                        document.getElementById('pnl-summary').style.color = '#f87171';
+                    }
+
+                    pnlChart.update();
+                }
+            } catch (e) {
+                console.error("Fetch error:", e);
+            }
+        }
+
+        window.onload = function() {
+            initChart();
+            fetchStatus();
+            setInterval(fetchStatus, 3000);
+        };
+    </script>
+</body>
+</html>tml>

@@ -1,0 +1,181 @@
+{
+  "summary": {
+    "markets_traded": 21,
+    "total_invested": 20.99998258,
+    "total_returned": 21.034815000000002,
+    "net_pnl": 0.03483241999999964,
+    "wins": 9,
+    "losses": 12,
+    "win_rate": 42.857142857142854
+  },
+  "results": [
+    {
+      "time": "2026-08-07 23:51:03",
+      "question": "Bitcoin Up or Down - August 7, 7:50PM-7:55PM ET",
+      "winner": null,
+      "is_scalp_exited": true,
+      "pnl": -0.2474992800000002,
+      "status": "LOSS"
+    },
+    {
+      "time": "2026-08-07 23:40:14",
+      "question": "Bitcoin Up or Down - August 7, 7:40PM-7:45PM ET",
+      "winner": "Up",
+      "is_scalp_exited": true,
+      "pnl": -0.05061900000000019,
+      "status": "LOSS"
+    },
+    {
+      "time": "2026-08-07 23:35:32",
+      "question": "Bitcoin Up or Down - August 7, 7:35PM-7:40PM ET",
+      "winner": "Up",
+      "is_scalp_exited": true,
+      "pnl": -0.017649000000000026,
+      "status": "LOSS"
+    },
+    {
+      "time": "2026-08-07 23:30:14",
+      "question": "Bitcoin Up or Down - August 7, 7:30PM-7:35PM ET",
+      "winner": "Down",
+      "is_scalp_exited": false,
+      "pnl": 0.78571372,
+      "status": "WIN"
+    },
+    {
+      "time": "2026-08-07 23:26:30",
+      "question": "Bitcoin Up or Down - August 7, 7:25PM-7:30PM ET",
+      "winner": "Up",
+      "is_scalp_exited": true,
+      "pnl": -0.019799260000000096,
+      "status": "LOSS"
+    },
+    {
+      "time": "2026-08-07 23:17:06",
+      "question": "Bitcoin Up or Down - August 7, 7:15PM-7:20PM ET",
+      "winner": "Up",
+      "is_scalp_exited": true,
+      "pnl": -0.0704982999999999,
+      "status": "LOSS"
+    },
+    {
+      "time": "2026-08-07 23:11:21",
+      "question": "Bitcoin Up or Down - August 7, 7:10PM-7:15PM ET",
+      "winner": "Up",
+      "is_scalp_exited": true,
+      "pnl": -0.0025240000000000817,
+      "status": "LOSS"
+    },
+    {
+      "time": "2026-08-07 23:05:31",
+      "question": "Bitcoin Up or Down - August 7, 7:05PM-7:10PM ET",
+      "winner": "Up",
+      "is_scalp_exited": true,
+      "pnl": -0.0361490000000001,
+      "status": "LOSS"
+    },
+    {
+      "time": "2026-08-07 23:00:04",
+      "question": "Bitcoin Up or Down - August 7, 7:00PM-7:05PM ET",
+      "winner": "Up",
+      "is_scalp_exited": true,
+      "pnl": 0.08000000000000007,
+      "status": "WIN"
+    },
+    {
+      "time": "2026-08-07 22:55:07",
+      "question": "Bitcoin Up or Down - August 7, 6:55PM-7:00PM ET",
+      "winner": "Up",
+      "is_scalp_exited": true,
+      "pnl": -0.04713400000000001,
+      "status": "LOSS"
+    },
+    {
+      "time": "2026-08-07 22:21:01",
+      "question": "Bitcoin Up or Down - August 7, 6:20PM-6:25PM ET",
+      "winner": "Up",
+      "is_scalp_exited": true,
+      "pnl": 0.01998367000000012,
+      "status": "WIN"
+    },
+    {
+      "time": "2026-08-07 22:15:23",
+      "question": "Bitcoin Up or Down - August 7, 6:15PM-6:20PM ET",
+      "winner": "Down",
+      "is_scalp_exited": true,
+      "pnl": 0.030900739999999982,
+      "status": "WIN"
+    },
+    {
+      "time": "2026-08-07 22:01:12",
+      "question": "Bitcoin Up or Down - August 7, 6:00PM-6:05PM ET",
+      "winner": "Down",
+      "is_scalp_exited": true,
+      "pnl": 0.035866000000000064,
+      "status": "WIN"
+    },
+    {
+      "time": "2026-08-07 21:55:27",
+      "question": "Bitcoin Up or Down - August 7, 5:55PM-6:00PM ET",
+      "winner": "Down",
+      "is_scalp_exited": true,
+      "pnl": 0.03987600000000002,
+      "status": "WIN"
+    },
+    {
+      "time": "2026-08-07 21:45:03",
+      "question": "Bitcoin Up or Down - August 7, 5:45PM-5:50PM ET",
+      "winner": "Down",
+      "is_scalp_exited": true,
+      "pnl": 0.03240071999999983,
+      "status": "WIN"
+    },
+    {
+      "time": "2026-08-07 21:40:03",
+      "question": "Bitcoin Up or Down - August 7, 5:40PM-5:45PM ET",
+      "winner": "Up",
+      "is_scalp_exited": true,
+      "pnl": -0.27039932999999994,
+      "status": "LOSS"
+    },
+    {
+      "time": "2026-08-07 21:36:28",
+      "question": "Bitcoin Up or Down - August 7, 5:35PM-5:40PM ET",
+      "winner": "Up",
+      "is_scalp_exited": true,
+      "pnl": -0.08528525999999981,
+      "status": "LOSS"
+    },
+    {
+      "time": "2026-08-07 21:32:53",
+      "question": "Bitcoin Up or Down - August 7, 5:30PM-5:35PM ET",
+      "winner": "Up",
+      "is_scalp_exited": true,
+      "pnl": 0.040000000000000036,
+      "status": "WIN"
+    },
+    {
+      "time": "2026-08-07 21:20:56",
+      "question": "Bitcoin Up or Down - August 7, 5:20PM-5:25PM ET",
+      "winner": "Up",
+      "is_scalp_exited": true,
+      "pnl": -0.21421900000000027,
+      "status": "LOSS"
+    },
+    {
+      "time": "2026-08-07 21:01:40",
+      "question": "Bitcoin Up or Down - August 7, 5:00PM-5:05PM ET",
+      "winner": "Up",
+      "is_scalp_exited": true,
+      "pnl": 0.052466000000000235,
+      "status": "WIN"
+    },
+    {
+      "time": "2026-08-07 20:56:03",
+      "question": "Bitcoin Up or Down - August 7, 4:55PM-5:00PM ET",
+      "winner": "Up",
+      "is_scalp_exited": true,
+      "pnl": -0.020599000000000034,
+      "status": "LOSS"
+    }
+  ]
+}

@@ -1,0 +1,502 @@
+{
+  "summary": {
+    "total_markets": 592,
+    "wins": 538,
+    "losses": 54,
+    "win_rate": "90.88%",
+    "total_usdc_wiped_by_losses": 206.42000000000002,
+    "average_stake_at_loss": 3.822592592592593,
+    "max_stake_lost": 46.07,
+    "average_entry_price_of_losses": 0.6562962962962963,
+    "losses_on_up": 25,
+    "losses_on_down": 29
+  },
+  "losses": [
+    {
+      "index": 1,
+      "timestamp": 1784447941,
+      "time_str": "2026-07-19 07:59:01",
+      "market_question": "Bitcoin Up or Down - July 19, 3:55AM-4:00AM ET",
+      "outcome_bet": "down",
+      "entry_price": 0.84,
+      "stake_lost": 1.12
+    },
+    {
+      "index": 2,
+      "timestamp": 1784480621,
+      "time_str": "2026-07-19 17:03:41",
+      "market_question": "Bitcoin Up or Down - July 19, 1:00PM-1:05PM ET",
+      "outcome_bet": "down",
+      "entry_price": 0.84,
+      "stake_lost": 2.46
+    },
+    {
+      "index": 3,
+      "timestamp": 1784485421,
+      "time_str": "2026-07-19 18:23:41",
+      "market_question": "Bitcoin Up or Down - July 19, 2:20PM-2:25PM ET",
+      "outcome_bet": "down",
+      "entry_price": 0.65,
+      "stake_lost": 1.17
+    },
+    {
+      "index": 4,
+      "timestamp": 1784510921,
+      "time_str": "2026-07-20 01:28:41",
+      "market_question": "Bitcoin Up or Down - July 19, 9:25PM-9:30PM ET",
+      "outcome_bet": "up",
+      "entry_price": 0.73,
+      "stake_lost": 6.83
+    },
+    {
+      "index": 5,
+      "timestamp": 1784513333,
+      "time_str": "2026-07-20 02:08:53",
+      "market_question": "Bitcoin Up or Down - July 19, 10:05PM-10:10PM ET",
+      "outcome_bet": "down",
+      "entry_price": 0.97,
+      "stake_lost": 1.01
+    },
+    {
+      "index": 6,
+      "timestamp": 1784530789,
+      "time_str": "2026-07-20 06:59:49",
+      "market_question": "Bitcoin Up or Down - July 20, 2:55AM-3:00AM ET",
+      "outcome_bet": "down",
+      "entry_price": 0.84,
+      "stake_lost": 9.58
+    },
+    {
+      "index": 7,
+      "timestamp": 1784535596,
+      "time_str": "2026-07-20 08:19:56",
+      "market_question": "Bitcoin Up or Down - July 20, 4:15AM-4:20AM ET",
+      "outcome_bet": "up",
+      "entry_price": 0.76,
+      "stake_lost": 5.97
+    },
+    {
+      "index": 8,
+      "timestamp": 1784550831,
+      "time_str": "2026-07-20 12:33:51",
+      "market_question": "Bitcoin Up or Down - July 20, 8:30AM-8:35AM ET",
+      "outcome_bet": "down",
+      "entry_price": 0.96,
+      "stake_lost": 2.53
+    },
+    {
+      "index": 9,
+      "timestamp": 1784561371,
+      "time_str": "2026-07-20 15:29:31",
+      "market_question": "Bitcoin Up or Down - July 20, 11:25AM-11:30AM ET",
+      "outcome_bet": "down",
+      "entry_price": 0.84,
+      "stake_lost": 1.61
+    },
+    {
+      "index": 10,
+      "timestamp": 1784605450,
+      "time_str": "2026-07-21 03:44:10",
+      "market_question": "Bitcoin Up or Down - July 20, 11:40PM-11:45PM ET",
+      "outcome_bet": "down",
+      "entry_price": 0.81,
+      "stake_lost": 9.46
+    },
+    {
+      "index": 11,
+      "timestamp": 1784611788,
+      "time_str": "2026-07-21 05:29:48",
+      "market_question": "Bitcoin Up or Down - July 21, 1:25AM-1:30AM ET",
+      "outcome_bet": "up",
+      "entry_price": 0.71,
+      "stake_lost": 1.0
+    },
+    {
+      "index": 12,
+      "timestamp": 1784645376,
+      "time_str": "2026-07-21 14:49:36",
+      "market_question": "Bitcoin Up or Down - July 21, 10:45AM-10:50AM ET",
+      "outcome_bet": "up",
+      "entry_price": 0.76,
+      "stake_lost": 46.07
+    },
+    {
+      "index": 13,
+      "timestamp": 1784645921,
+      "time_str": "2026-07-21 14:58:41",
+      "market_question": "Bitcoin Up or Down - July 21, 10:55AM-11:00AM ET",
+      "outcome_bet": "up",
+      "entry_price": 0.92,
+      "stake_lost": 1.0
+    },
+    {
+      "index": 14,
+      "timestamp": 1784653141,
+      "time_str": "2026-07-21 16:59:01",
+      "market_question": "Bitcoin Up or Down - July 21, 12:55PM-1:00PM ET",
+      "outcome_bet": "up",
+      "entry_price": 0.66,
+      "stake_lost": 2.05
+    },
+    {
+      "index": 15,
+      "timestamp": 1784657050,
+      "time_str": "2026-07-21 18:04:10",
+      "market_question": "Bitcoin Up or Down - July 21, 2:00PM-2:05PM ET",
+      "outcome_bet": "down",
+      "entry_price": 0.89,
+      "stake_lost": 1.32
+    },
+    {
+      "index": 16,
+      "timestamp": 1784724560,
+      "time_str": "2026-07-22 12:49:20",
+      "market_question": "Bitcoin Up or Down - July 22, 8:45AM-8:50AM ET",
+      "outcome_bet": "up",
+      "entry_price": 0.35,
+      "stake_lost": 3.47
+    },
+    {
+      "index": 17,
+      "timestamp": 1784728450,
+      "time_str": "2026-07-22 13:54:10",
+      "market_question": "Bitcoin Up or Down - July 22, 9:50AM-9:55AM ET",
+      "outcome_bet": "down",
+      "entry_price": 0.83,
+      "stake_lost": 1.21
+    },
+    {
+      "index": 18,
+      "timestamp": 1784739831,
+      "time_str": "2026-07-22 17:03:51",
+      "market_question": "Bitcoin Up or Down - July 22, 1:00PM-1:05PM ET",
+      "outcome_bet": "up",
+      "entry_price": 0.97,
+      "stake_lost": 9.36
+    },
+    {
+      "index": 19,
+      "timestamp": 1784757571,
+      "time_str": "2026-07-22 21:59:31",
+      "market_question": "Bitcoin Up or Down - July 22, 5:55PM-6:00PM ET",
+      "outcome_bet": "down",
+      "entry_price": 0.7,
+      "stake_lost": 1.2
+    },
+    {
+      "index": 20,
+      "timestamp": 1784758140,
+      "time_str": "2026-07-22 22:09:00",
+      "market_question": "Bitcoin Up or Down - July 22, 6:05PM-6:10PM ET",
+      "outcome_bet": "down",
+      "entry_price": 0.86,
+      "stake_lost": 1.01
+    },
+    {
+      "index": 21,
+      "timestamp": 1784759041,
+      "time_str": "2026-07-22 22:24:01",
+      "market_question": "Bitcoin Up or Down - July 22, 6:20PM-6:25PM ET",
+      "outcome_bet": "down",
+      "entry_price": 0.93,
+      "stake_lost": 1.18
+    },
+    {
+      "index": 22,
+      "timestamp": 1784772281,
+      "time_str": "2026-07-23 02:04:41",
+      "market_question": "Bitcoin Up or Down - July 22, 10:00PM-10:05PM ET",
+      "outcome_bet": "down",
+      "entry_price": 0.68,
+      "stake_lost": 1.0
+    },
+    {
+      "index": 23,
+      "timestamp": 1784780996,
+      "time_str": "2026-07-23 04:29:56",
+      "market_question": "Bitcoin Up or Down - July 23, 12:25AM-12:30AM ET",
+      "outcome_bet": "up",
+      "entry_price": 0.13,
+      "stake_lost": 4.0
+    },
+    {
+      "index": 24,
+      "timestamp": 1784825922,
+      "time_str": "2026-07-23 16:58:42",
+      "market_question": "Bitcoin Up or Down - July 23, 12:55PM-1:00PM ET",
+      "outcome_bet": "up",
+      "entry_price": 0.99,
+      "stake_lost": 9.33
+    },
+    {
+      "index": 25,
+      "timestamp": 1784856521,
+      "time_str": "2026-07-24 01:28:41",
+      "market_question": "Bitcoin Up or Down - July 23, 9:25PM-9:30PM ET",
+      "outcome_bet": "up",
+      "entry_price": 0.98,
+      "stake_lost": 2.93
+    },
+    {
+      "index": 26,
+      "timestamp": 1784889541,
+      "time_str": "2026-07-24 10:39:01",
+      "market_question": "Bitcoin Up or Down - July 24, 6:35AM-6:40AM ET",
+      "outcome_bet": "up",
+      "entry_price": 0.87,
+      "stake_lost": 3.17
+    },
+    {
+      "index": 27,
+      "timestamp": 1784896441,
+      "time_str": "2026-07-24 12:34:01",
+      "market_question": "Bitcoin Up or Down - July 24, 8:30AM-8:35AM ET",
+      "outcome_bet": "up",
+      "entry_price": 0.86,
+      "stake_lost": 1.49
+    },
+    {
+      "index": 28,
+      "timestamp": 1785002997,
+      "time_str": "2026-07-25 18:09:57",
+      "market_question": "Bitcoin Up or Down - July 25, 2:05PM-2:10PM ET",
+      "outcome_bet": "up",
+      "entry_price": 0.01,
+      "stake_lost": 1.0
+    },
+    {
+      "index": 29,
+      "timestamp": 1785003300,
+      "time_str": "2026-07-25 18:15:00",
+      "market_question": "Bitcoin Up or Down - July 25, 2:10PM-2:15PM ET",
+      "outcome_bet": "down",
+      "entry_price": 0.01,
+      "stake_lost": 1.0
+    },
+    {
+      "index": 30,
+      "timestamp": 1785097499,
+      "time_str": "2026-07-26 20:24:59",
+      "market_question": "Bitcoin Up or Down - July 26, 4:20PM-4:25PM ET",
+      "outcome_bet": "up",
+      "entry_price": 0.78,
+      "stake_lost": 1.61
+    },
+    {
+      "index": 31,
+      "timestamp": 1785106193,
+      "time_str": "2026-07-26 22:49:53",
+      "market_question": "Bitcoin Up or Down - July 26, 6:45PM-6:50PM ET",
+      "outcome_bet": "down",
+      "entry_price": 0.25,
+      "stake_lost": 1.88
+    },
+    {
+      "index": 32,
+      "timestamp": 1785131097,
+      "time_str": "2026-07-27 05:44:57",
+      "market_question": "Bitcoin Up or Down - July 27, 1:40AM-1:45AM ET",
+      "outcome_bet": "up",
+      "entry_price": 0.24,
+      "stake_lost": 1.48
+    },
+    {
+      "index": 33,
+      "timestamp": 1785212098,
+      "time_str": "2026-07-28 04:14:58",
+      "market_question": "Bitcoin Up or Down - July 28, 12:10AM-12:15AM ET",
+      "outcome_bet": "down",
+      "entry_price": 0.59,
+      "stake_lost": 6.41
+    },
+    {
+      "index": 34,
+      "timestamp": 1785213595,
+      "time_str": "2026-07-28 04:39:55",
+      "market_question": "Bitcoin Up or Down - July 28, 12:35AM-12:40AM ET",
+      "outcome_bet": "down",
+      "entry_price": 0.79,
+      "stake_lost": 1.0
+    },
+    {
+      "index": 35,
+      "timestamp": 1785262796,
+      "time_str": "2026-07-28 18:19:56",
+      "market_question": "Bitcoin Up or Down - July 28, 2:15PM-2:20PM ET",
+      "outcome_bet": "up",
+      "entry_price": 0.24,
+      "stake_lost": 1.08
+    },
+    {
+      "index": 36,
+      "timestamp": 1785282895,
+      "time_str": "2026-07-28 23:54:55",
+      "market_question": "Bitcoin Up or Down - July 28, 7:50PM-7:55PM ET",
+      "outcome_bet": "down",
+      "entry_price": 0.3,
+      "stake_lost": 1.78
+    },
+    {
+      "index": 37,
+      "timestamp": 1785288597,
+      "time_str": "2026-07-29 01:29:57",
+      "market_question": "Bitcoin Up or Down - July 28, 9:25PM-9:30PM ET",
+      "outcome_bet": "down",
+      "entry_price": 0.3,
+      "stake_lost": 1.69
+    },
+    {
+      "index": 38,
+      "timestamp": 1785295495,
+      "time_str": "2026-07-29 03:24:55",
+      "market_question": "Bitcoin Up or Down - July 28, 11:20PM-11:25PM ET",
+      "outcome_bet": "up",
+      "entry_price": 0.98,
+      "stake_lost": 1.95
+    },
+    {
+      "index": 39,
+      "timestamp": 1785307194,
+      "time_str": "2026-07-29 06:39:54",
+      "market_question": "Bitcoin Up or Down - July 29, 2:35AM-2:40AM ET",
+      "outcome_bet": "down",
+      "entry_price": 0.55,
+      "stake_lost": 26.28
+    },
+    {
+      "index": 40,
+      "timestamp": 1785317092,
+      "time_str": "2026-07-29 09:24:52",
+      "market_question": "Bitcoin Up or Down - July 29, 5:20AM-5:25AM ET",
+      "outcome_bet": "down",
+      "entry_price": 0.95,
+      "stake_lost": 1.05
+    },
+    {
+      "index": 41,
+      "timestamp": 1785319796,
+      "time_str": "2026-07-29 10:09:56",
+      "market_question": "Bitcoin Up or Down - July 29, 6:05AM-6:10AM ET",
+      "outcome_bet": "down",
+      "entry_price": 0.38,
+      "stake_lost": 1.04
+    },
+    {
+      "index": 42,
+      "timestamp": 1785343792,
+      "time_str": "2026-07-29 16:49:52",
+      "market_question": "Bitcoin Up or Down - July 29, 12:45PM-12:50PM ET",
+      "outcome_bet": "up",
+      "entry_price": 0.46,
+      "stake_lost": 1.0
+    },
+    {
+      "index": 43,
+      "timestamp": 1785388498,
+      "time_str": "2026-07-30 05:14:58",
+      "market_question": "Bitcoin Up or Down - July 30, 1:10AM-1:15AM ET",
+      "outcome_bet": "up",
+      "entry_price": 0.36,
+      "stake_lost": 2.85
+    },
+    {
+      "index": 44,
+      "timestamp": 1785398696,
+      "time_str": "2026-07-30 08:04:56",
+      "market_question": "Bitcoin Up or Down - July 30, 4:00AM-4:05AM ET",
+      "outcome_bet": "down",
+      "entry_price": 0.33,
+      "stake_lost": 1.19
+    },
+    {
+      "index": 45,
+      "timestamp": 1785409198,
+      "time_str": "2026-07-30 10:59:58",
+      "market_question": "Bitcoin Up or Down - July 30, 6:55AM-7:00AM ET",
+      "outcome_bet": "up",
+      "entry_price": 0.31,
+      "stake_lost": 1.59
+    },
+    {
+      "index": 46,
+      "timestamp": 1785418796,
+      "time_str": "2026-07-30 13:39:56",
+      "market_question": "Bitcoin Up or Down - July 30, 9:35AM-9:40AM ET",
+      "outcome_bet": "up",
+      "entry_price": 0.47,
+      "stake_lost": 2.02
+    },
+    {
+      "index": 47,
+      "timestamp": 1785422394,
+      "time_str": "2026-07-30 14:39:54",
+      "market_question": "Bitcoin Up or Down - July 30, 10:35AM-10:40AM ET",
+      "outcome_bet": "down",
+      "entry_price": 0.94,
+      "stake_lost": 1.02
+    },
+    {
+      "index": 48,
+      "timestamp": 1785426592,
+      "time_str": "2026-07-30 15:49:52",
+      "market_question": "Bitcoin Up or Down - July 30, 11:45AM-11:50AM ET",
+      "outcome_bet": "down",
+      "entry_price": 0.97,
+      "stake_lost": 1.09
+    },
+    {
+      "index": 49,
+      "timestamp": 1785453892,
+      "time_str": "2026-07-30 23:24:52",
+      "market_question": "Bitcoin Up or Down - July 30, 7:20PM-7:25PM ET",
+      "outcome_bet": "down",
+      "entry_price": 0.98,
+      "stake_lost": 2.13
+    },
+    {
+      "index": 50,
+      "timestamp": 1785504918,
+      "time_str": "2026-07-31 13:35:18",
+      "market_question": "Bitcoin Up or Down - July 31, 9:35AM-9:40AM ET",
+      "outcome_bet": "up",
+      "entry_price": 0.61,
+      "stake_lost": 5.03
+    },
+    {
+      "index": 51,
+      "timestamp": 1785505210,
+      "time_str": "2026-07-31 13:40:10",
+      "market_question": "Bitcoin Up or Down - July 31, 9:40AM-9:45AM ET",
+      "outcome_bet": "up",
+      "entry_price": 0.63,
+      "stake_lost": 1.0
+    },
+    {
+      "index": 52,
+      "timestamp": 1785519610,
+      "time_str": "2026-07-31 17:40:10",
+      "market_question": "Bitcoin Up or Down - July 31, 1:40PM-1:45PM ET",
+      "outcome_bet": "down",
+      "entry_price": 0.49,
+      "stake_lost": 1.0
+    },
+    {
+      "index": 53,
+      "timestamp": 1785520527,
+      "time_str": "2026-07-31 17:55:27",
+      "market_question": "Bitcoin Up or Down - July 31, 1:55PM-2:00PM ET",
+      "outcome_bet": "up",
+      "entry_price": 0.63,
+      "stake_lost": 1.52
+    },
+    {
+      "index": 54,
+      "timestamp": 1785538733,
+      "time_str": "2026-07-31 22:58:53",
+      "market_question": "Bitcoin Up or Down - July 31, 6:55PM-7:00PM ET",
+      "outcome_bet": "down",
+      "entry_price": 0.56,
+      "stake_lost": 3.2
+    }
+  ]
+}

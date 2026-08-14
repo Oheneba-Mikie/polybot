@@ -162,6 +162,7 @@ BET_WINDOW_END      = 5     # latest check for all (T-5s)
 
 # Strategy Rules:
 CONFIDENCE_THRESHOLD = 0.65  # dominant side must be priced at $0.65+
+MAX_EARLY_PRICE      = 0.85  # Max price allowed for early trend trades
 
 # Order-book probe marks (seconds before close)
 PROBE_MARKS = [80, 70, 60, 50, 40, 35, 30, 25, 20, 18, 15, 12, 10, 8, 5, 3, 2, 1, 0]
@@ -488,6 +489,10 @@ def run_probe_phase(ws: WSFeed, ptb: float, w_end: int, market: dict, clob_clien
                         if abs_move >= required_move and last_clear_signal == current_dir:
                             sig_ask = up_ask if last_clear_signal == "UP" else down_ask
                             if sig_ask is not None:
+                                if sig_ask > MAX_EARLY_PRICE:
+                                    print(f"  ⚠️ [S1] Skipping early bet: contract price is too expensive (${sig_ask:.4f} > ${MAX_EARLY_PRICE:.2f}).")
+                                    continue
+
                                 s1_decided_side = last_clear_signal
                                 s1_entry_price  = sig_ask
                                 results[-1]["bet_placed"] = True
