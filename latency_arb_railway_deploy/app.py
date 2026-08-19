@@ -533,11 +533,16 @@ def bot_loop():
                     log(f"[FLOW] UP: ${up_p:.4f} (Sz: {up_sz:.1f}) | DN: ${dn_p:.4f} (Sz: {dn_sz:.1f}) | Combined: ${(up_p+dn_p):.4f}{delta_str}")
                     last_flow_time = now_ts
                     
-                    # Trigger check
-                    if up_p == BUY_TARGET_PRICE and up_sz >= MIN_SHARES:
-                        execute_option_a_trade("UP", up_id, up_p, up_sz)
-                    elif dn_p == BUY_TARGET_PRICE and dn_sz >= MIN_SHARES:
-                        execute_option_a_trade("DOWN", down_id, dn_p, dn_sz)
+                    # Trigger check: Guaranteed Final Seconds Window (<= 15s remaining) with Oracle Delta verification
+                    w_start_cur = int(now_ts // 300) * 300
+                    seconds_left_cur = int((w_start_cur + 300) - now_ts)
+                    if 1 <= seconds_left_cur <= 15:
+                        delta_ok_up = (live_btc is None or current_ptb is None or (live_btc - current_ptb) >= 15.0)
+                        delta_ok_down = (live_btc is None or current_ptb is None or (current_ptb - live_btc) >= 15.0)
+                        if up_p <= BUY_TARGET_PRICE and up_sz >= MIN_SHARES and delta_ok_up:
+                            execute_option_a_trade("UP", up_id, up_p, up_sz)
+                        elif dn_p <= BUY_TARGET_PRICE and dn_sz >= MIN_SHARES and delta_ok_down:
+                            execute_option_a_trade("DOWN", down_id, dn_p, dn_sz)
                             
             time.sleep(0.5)
         except Exception as e:
