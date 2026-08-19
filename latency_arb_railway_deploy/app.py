@@ -391,8 +391,8 @@ def on_message(ws, message):
             w_end = w_start + 300
             seconds_left = int(w_end - now_ts)
             
-            # Final 15s Window and Strict $0.98 Entry
-            if 1 <= seconds_left <= 15:
+            # Final 11s Window and Strict $0.98 Entry
+            if 1 <= seconds_left <= 11:
                 if up_price == BUY_TARGET_PRICE and up_size >= MIN_SHARES:
                     log(f"[TRIGGER] UP @ ${up_price:.4f} with {seconds_left}s left")
                     execute_option_a_trade("UP", up_id, up_price, up_size)
@@ -530,10 +530,10 @@ def bot_loop():
                     log(f"[FLOW] UP: ${up_p:.4f} (Sz: {up_sz:.1f}) | DN: ${dn_p:.4f} (Sz: {dn_sz:.1f}) | Combined: ${(up_p+dn_p):.4f}{delta_str}")
                     last_flow_time = now_ts
                     
-                    # Trigger check: Final 15s Window and Strict $0.98 Entry
+                    # Trigger check: Final 11s Window and Strict $0.98 Entry
                     w_start_cur = int(now_ts // 300) * 300
                     seconds_left_cur = int((w_start_cur + 300) - now_ts)
-                    if 1 <= seconds_left_cur <= 15:
+                    if 1 <= seconds_left_cur <= 11:
                         if up_p == BUY_TARGET_PRICE and up_sz >= MIN_SHARES:
                             execute_option_a_trade("UP", up_id, up_p, up_sz)
                         elif dn_p == BUY_TARGET_PRICE and dn_sz >= MIN_SHARES:
