@@ -379,16 +379,16 @@ def on_message(ws, message):
             w_end = w_start + 300
             seconds_left = int(w_end - now_ts)
             
-            # TRIGGER OPTION B: Guaranteed Final Seconds Window (<= 15s remaining) with Oracle Delta verification
+            # Strict 0.98 Entry within the final 15s window with confirmed positive delta
             if 1 <= seconds_left <= 15:
-                delta_ok_up = (live_btc is None or current_ptb is None or (live_btc - current_ptb) >= 15.0)
-                delta_ok_down = (live_btc is None or current_ptb is None or (current_ptb - live_btc) >= 15.0)
+                delta_ok_up = (live_btc is not None and current_ptb is not None and (live_btc - current_ptb) >= 15.0)
+                delta_ok_down = (live_btc is not None and current_ptb is not None and (current_ptb - live_btc) >= 15.0)
                 
-                if up_price <= BUY_TARGET_PRICE and up_size >= MIN_SHARES and delta_ok_up:
-                    log(f"[LOCK-IN TRIGGER] UP @ ${up_price:.4f} with {seconds_left}s left | Delta: {live_btc - current_ptb if live_btc and current_ptb else 'N/A'}")
+                if up_price == BUY_TARGET_PRICE and up_size >= MIN_SHARES and delta_ok_up:
+                    log(f"[LOCK-IN TRIGGER] UP @ ${up_price:.4f} with {seconds_left}s left | Delta: {live_btc - current_ptb:+.2f}")
                     execute_option_b_trade("UP", up_id, up_price, up_size)
-                elif down_price <= BUY_TARGET_PRICE and down_size >= MIN_SHARES and delta_ok_down:
-                    log(f"[LOCK-IN TRIGGER] DOWN @ ${down_price:.4f} with {seconds_left}s left | Delta: {current_ptb - live_btc if live_btc and current_ptb else 'N/A'}")
+                elif down_price == BUY_TARGET_PRICE and down_size >= MIN_SHARES and delta_ok_down:
+                    log(f"[LOCK-IN TRIGGER] DOWN @ ${down_price:.4f} with {seconds_left}s left | Delta: {current_ptb - live_btc:+.2f}")
                     execute_option_b_trade("DOWN", down_id, down_price, down_size)
     except Exception as e:
         pass
@@ -525,15 +525,15 @@ def bot_loop():
                     log(f"[FLOW] UP: ${up_p:.4f} (Sz: {up_sz:.1f}) | DN: ${dn_p:.4f} (Sz: {dn_sz:.1f}) | Combined: ${(up_p+dn_p):.4f}{delta_str}")
                     last_flow_time = now_ts
                     
-                    # Trigger check: Guaranteed Final Seconds Window (<= 15s remaining) with Oracle Delta verification
+                    # Trigger check: Strict 0.98 Entry within final 15s with confirmed delta
                     w_start_cur = int(now_ts // 300) * 300
                     seconds_left_cur = int((w_start_cur + 300) - now_ts)
                     if 1 <= seconds_left_cur <= 15:
-                        delta_ok_up = (live_btc is None or current_ptb is None or (live_btc - current_ptb) >= 15.0)
-                        delta_ok_down = (live_btc is None or current_ptb is None or (current_ptb - live_btc) >= 15.0)
-                        if up_p <= BUY_TARGET_PRICE and up_sz >= MIN_SHARES and delta_ok_up:
+                        delta_ok_up = (live_btc is not None and current_ptb is not None and (live_btc - current_ptb) >= 15.0)
+                        delta_ok_down = (live_btc is not None and current_ptb is not None and (current_ptb - live_btc) >= 15.0)
+                        if up_p == BUY_TARGET_PRICE and up_sz >= MIN_SHARES and delta_ok_up:
                             execute_option_b_trade("UP", up_id, up_p, up_sz)
-                        elif dn_p <= BUY_TARGET_PRICE and dn_sz >= MIN_SHARES and delta_ok_down:
+                        elif dn_p == BUY_TARGET_PRICE and dn_sz >= MIN_SHARES and delta_ok_down:
                             execute_option_b_trade("DOWN", down_id, dn_p, dn_sz)
                             
             time.sleep(0.5)
