@@ -379,16 +379,13 @@ def on_message(ws, message):
             w_end = w_start + 300
             seconds_left = int(w_end - now_ts)
             
-            # Strict 0.98 Entry within the final 15s window with confirmed positive delta
+            # Final 15s Window and Strict $0.98 Entry
             if 1 <= seconds_left <= 15:
-                delta_ok_up = (live_btc is not None and current_ptb is not None and (live_btc - current_ptb) >= 15.0)
-                delta_ok_down = (live_btc is not None and current_ptb is not None and (current_ptb - live_btc) >= 15.0)
-                
-                if up_price == BUY_TARGET_PRICE and up_size >= MIN_SHARES and delta_ok_up:
-                    log(f"[LOCK-IN TRIGGER] UP @ ${up_price:.4f} with {seconds_left}s left | Delta: {live_btc - current_ptb:+.2f}")
+                if up_price == BUY_TARGET_PRICE and up_size >= MIN_SHARES:
+                    log(f"[TRIGGER] UP @ ${up_price:.4f} with {seconds_left}s left")
                     execute_option_b_trade("UP", up_id, up_price, up_size)
-                elif down_price == BUY_TARGET_PRICE and down_size >= MIN_SHARES and delta_ok_down:
-                    log(f"[LOCK-IN TRIGGER] DOWN @ ${down_price:.4f} with {seconds_left}s left | Delta: {current_ptb - live_btc:+.2f}")
+                elif down_price == BUY_TARGET_PRICE and down_size >= MIN_SHARES:
+                    log(f"[TRIGGER] DOWN @ ${down_price:.4f} with {seconds_left}s left")
                     execute_option_b_trade("DOWN", down_id, down_price, down_size)
     except Exception as e:
         pass
@@ -525,15 +522,13 @@ def bot_loop():
                     log(f"[FLOW] UP: ${up_p:.4f} (Sz: {up_sz:.1f}) | DN: ${dn_p:.4f} (Sz: {dn_sz:.1f}) | Combined: ${(up_p+dn_p):.4f}{delta_str}")
                     last_flow_time = now_ts
                     
-                    # Trigger check: Strict 0.98 Entry within final 15s with confirmed delta
+                    # Trigger check: Final 15s Window and Strict $0.98 Entry
                     w_start_cur = int(now_ts // 300) * 300
                     seconds_left_cur = int((w_start_cur + 300) - now_ts)
                     if 1 <= seconds_left_cur <= 15:
-                        delta_ok_up = (live_btc is not None and current_ptb is not None and (live_btc - current_ptb) >= 15.0)
-                        delta_ok_down = (live_btc is not None and current_ptb is not None and (current_ptb - live_btc) >= 15.0)
-                        if up_p == BUY_TARGET_PRICE and up_sz >= MIN_SHARES and delta_ok_up:
+                        if up_p == BUY_TARGET_PRICE and up_sz >= MIN_SHARES:
                             execute_option_b_trade("UP", up_id, up_p, up_sz)
-                        elif dn_p == BUY_TARGET_PRICE and dn_sz >= MIN_SHARES and delta_ok_down:
+                        elif dn_p == BUY_TARGET_PRICE and dn_sz >= MIN_SHARES:
                             execute_option_b_trade("DOWN", down_id, dn_p, dn_sz)
                             
             time.sleep(0.5)
