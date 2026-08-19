@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Polymarket Bot Option B ($0.98 -> $1.00 Resolution)</title>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #090c10;
+            --surface: #0d1117;
+            --border: #21262d;
+            --text-primary: #f0f6fc;
+            --text-secondary: #8b949e;
+            --green: #238636;
+            --green-glow: #2ea043;
+            --red: #da3633;
+            --blue: #58a6ff;
+            --yellow: #d29922;
+            --purple: #a371f7;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background-color: var(--bg);
+            color: var(--text-primary);
+            font-family: 'Inter', sans-serif;
+            padding: 24px;
+            min-height: 100vh;
+        }
+
+        .container { max-width: 1300px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+        
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--surface);
+            padding: 20px 24px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+        }
+        .header-title h1 { font-size: 20px; font-weight: 700; color: #fff; margin-bottom: 4px; }
+        .header-title p { font-size: 13px; color: var(--text-secondary); font-family: 'JetBrains Mono', monospace; }
+        
+        .badge {
+            background: rgba(163, 113, 247, 0.15);
+            color: #d2a8ff;
+            border: 1px solid rgba(163, 113, 247, 0.4);
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 14px;
+        }
+        .stat-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 16px 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .stat-label { font-size: 12px; color: var(--text-secondary); text-transform: uppercase; font-weight: 600; }
+        .stat-val { font-size: 22px; font-weight: 700; font-family: 'JetBrains Mono', monospace; }
+        .stat-sub { font-size: 12px; color: var(--text-secondary); }
+
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1.2fr 1fr;
+            gap: 20px;
+        }
+        @media(max-width: 900px) { .main-grid { grid-template-columns: 1fr; } }
+
+        .panel {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            height: 480px;
+        }
+        .panel-header {
+            padding: 14px 18px;
+            background: #161b22;
+            border-bottom: 1px solid var(--border);
+            font-size: 13px;
+            font-weight: 600;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .log-box {
+            flex: 1;
+            padding: 14px;
+            overflow-y: auto;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            line-height: 1.6;
+            display: flex;
+            flex-direction: column-reverse;
+            gap: 4px;
+        }
+        .log-entry { color: #8b949e; word-break: break-all; }
+        .log-entry.trigger { color: #d29922; font-weight: bold; }
+        .log-entry.success { color: #3fb950; font-weight: bold; }
+        .log-entry.flow { color: #58a6ff; }
+
+        table { width: 100%; border-collapse: collapse; font-family: 'JetBrains Mono', monospace; font-size: 12px; }
+        th { text-align: left; padding: 10px 14px; color: var(--text-secondary); border-bottom: 1px solid var(--border); font-size: 11px; text-transform: uppercase; }
+        td { padding: 10px 14px; border-bottom: 1px solid #161b22; }
+        .win { color: #3fb950; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="header-title">
+                <h1>💎 Polymarket Bot: Option B (Buy @ $0.98 ➔ Hold to $1.00 Resolution)</h1>
+                <p id="cycle-slug">Connecting to live feed...</p>
+            </div>
+            <div class="badge" id="mode-badge">LIVE RESOLUTION ENGINE</div>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card" style="border-left: 4px solid var(--purple);">
+                <div class="stat-label">Current Balance</div>
+                <div class="stat-val win" id="val-balance">$6.00</div>
+                <div class="stat-sub">100% Rollover Active</div>
+            </div>
+            <div class="stat-card" style="border-left: 4px solid var(--yellow);">
+                <div class="stat-label">Total Profit</div>
+                <div class="stat-val" id="val-profit" style="color:var(--yellow);">$0.0000</div>
+                <div class="stat-sub">USDC Accumulated</div>
+            </div>
+            <div class="stat-card" style="border-left: 4px solid var(--blue);">
+                <div class="stat-label">Total Trades</div>
+                <div class="stat-val" id="val-trades">0</div>
+                <div class="stat-sub">Resolutions Collected</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">BTC Spot / PTB</div>
+                <div class="stat-val" id="val-btc" style="font-size:18px;">—</div>
+                <div class="stat-sub" id="val-delta">Diff: —</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Current Asks</div>
+                <div class="stat-val" id="val-asks" style="font-size:18px;">—</div>
+                <div class="stat-sub" id="val-sizes">Depth: —</div>
+            </div>
+        </div>
+
+        <div class="main-grid">
+            <div class="panel">
+                <div class="panel-header">
+                    <span>📡 Live WebSocket Event Stream</span>
+                    <span style="color:var(--text-secondary); font-size:11px;" id="last-update">—</span>
+                </div>
+                <div class="log-box" id="log-container">
+                    <div class="log-entry">Connecting to bot runtime...</div>
+                </div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-header">
+                    <span>📜 Resolution History (Payouts)</span>
+                </div>
+                <div style="overflow-y:auto; flex:1;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Time</th>
+                                <th>Side</th>
+                                <th>Shares</th>
+                                <th>Buy ➔ Payout</th>
+                                <th>Profit</th>
+                            </tr>
+                        </thead>
+                        <tbody id="trade-body">
+                            <tr><td colspan="5" style="text-align:center; color:var(--text-secondary); padding:20px;">No positions resolved yet. Scanning for $0.98...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function tick() {
+            fetch('/api/status')
+                .then(r => r.json())
+                .then(d => {
+                    document.getElementById('cycle-slug').textContent = d.current_slug ? 'Active Cycle: ' + d.current_slug : 'Initializing...';
+                    document.getElementById('mode-badge').textContent = d.mode;
+                    
+                    document.getElementById('val-balance').textContent = '$' + (d.balance || 0).toFixed(2);
+                    document.getElementById('val-profit').textContent = '$' + (d.total_profit_usdc || 0).toFixed(4);
+                    document.getElementById('val-trades').textContent = d.total_trades || 0;
+                    
+                    if (d.btc_price) {
+                        document.getElementById('val-btc').textContent = '$' + Number(d.btc_price).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2});
+                    }
+                    if (d.delta != null && d.ptb != null) {
+                        const isUp = d.delta >= 0;
+                        document.getElementById('val-delta').textContent = 'PTB: $' + Number(d.ptb).toLocaleString() + ' (' + (isUp ? '+' : '') + d.delta.toFixed(2) + ')';
+                        document.getElementById('val-delta').style.color = isUp ? 'var(--green-glow)' : 'var(--red)';
+                    }
+                    
+                    const u = d.up_ask != null ? '$' + d.up_ask.toFixed(2) : '—';
+                    const dn = d.down_ask != null ? '$' + d.down_ask.toFixed(2) : '—';
+                    document.getElementById('val-asks').textContent = `UP: ${u} | DN: ${dn}`;
+                    document.getElementById('val-sizes').textContent = `Depth: UP: ${d.up_size||0} | DN: ${d.down_size||0}`;
+                    
+                    if (d.logs && d.logs.length) {
+                        const box = document.getElementById('log-container');
+                        box.innerHTML = d.logs.slice().reverse().map(l => {
+                            let cls = 'log-entry';
+                            if (l.includes('[OPTION B TRIGGER]')) cls += ' trigger';
+                            else if (l.includes('[CYCLE RESOLVED]') || l.includes('[SUCCESS]')) cls += ' success';
+                            else if (l.includes('[FLOW]')) cls += ' flow';
+                            return `<div class="${cls}">${l}</div>`;
+                        }).join('');
+                    }
+                    
+                    if (d.history && d.history.length) {
+                        const tbody = document.getElementById('trade-body');
+                        tbody.innerHTML = d.history.map(t => `
+                            <tr>
+                                <td>${t.time}</td>
+                                <td><span style="font-weight:bold; color:${t.side==='UP'?'var(--green-glow)':'var(--blue)'}">${t.side}</span></td>
+                                <td>${t.shares}</td>
+                                <td>$${t.buy_price.toFixed(2)} ➔ $${t.payout_price.toFixed(2)}</td>
+                                <td class="win">+$${t.profit.toFixed(4)}</td>
+                            </tr>
+                        `).join('');
+                    }
+                    
+                    document.getElementById('last-update').textContent = new Date().toISOString().substring(11, 19) + ' UTC';
+                })
+                .catch(() => {});
+        }
+        setInterval(tick, 500);
+        tick();
+    </script>
+</body>
+</html>
