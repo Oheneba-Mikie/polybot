@@ -202,7 +202,8 @@ def execute_option_a_trade(side_name, token_id, ask_price, ask_size):
     # Calculate share size from 50% wallet allocation (shared between Bot A and Bot B)
     current_bal = bot_state["balance"]
     bot_allocation = current_bal * 0.50
-    max_affordable = int(bot_allocation / BUY_TARGET_PRICE)
+    exec_price = ask_price if ask_price else BUY_TARGET_PRICE
+    max_affordable = int(bot_allocation / exec_price)
     max_available = int(ask_size)
     target_shares = min(max_affordable, max_available)
     
@@ -211,9 +212,9 @@ def execute_option_a_trade(side_name, token_id, ask_price, ask_size):
         return
     
     cycle_traded = True
-    buy_cost = target_shares * BUY_TARGET_PRICE
-    log(f"[OPTION A TRIGGER] Detected {side_name} @ ${ask_price:.4f} (Depth: {ask_size:.1f} shares)")
-    log(f"[EXECUTE STEP 1] Buying {target_shares} shares of {side_name} @ ${BUY_TARGET_PRICE:.2f} (Cost: ${buy_cost:.2f})")
+    buy_cost = target_shares * exec_price
+    log(f"[OPTION A TRIGGER] Detected {side_name} @ ${exec_price:.4f} (Depth: {ask_size:.1f} shares)")
+    log(f"[EXECUTE STEP 1] Buying {target_shares} shares of {side_name} @ ${exec_price:.2f} (Cost: ${buy_cost:.2f})")
     
     order_id = f"BUY-OPT-A-{int(time.time()*1000)}"
     buy_success = False
@@ -223,7 +224,7 @@ def execute_option_a_trade(side_name, token_id, ask_price, ask_size):
             from py_clob_client_v2.clob_types import OrderArgs
             from py_clob_client_v2.order_builder.constants import BUY
             buy_args = OrderArgs(
-                price=BUY_TARGET_PRICE,
+                price=exec_price,
                 size=float(target_shares),
                 side=BUY,
                 token_id=token_id
@@ -274,7 +275,8 @@ def execute_option_a_trade(side_name, token_id, ask_price, ask_size):
             log(f"[PAPER STEP 2] Simulated Limit Sell active at ${SELL_TARGET_PRICE:.2f}.")
             
         # Register trade record and complete flip simulation / tracking
-        revenue = target_shares * SELL_TARGET_PRICE
+        sell_target = SELL_TARGET_PRICE if exec_price < SELL_TARGET_PRICE else 1.00
+        revenue = target_shares * sell_target
         profit = revenue - buy_cost
         bot_state["balance"] += revenue
         bot_state["total_trades"] += 1
@@ -284,8 +286,8 @@ def execute_option_a_trade(side_name, token_id, ask_price, ask_size):
             "time": datetime.datetime.now(datetime.timezone.utc).strftime("%H:%M:%S"),
             "side": side_name,
             "shares": target_shares,
-            "buy_price": BUY_TARGET_PRICE,
-            "sell_price": SELL_TARGET_PRICE,
+            "buy_price": exec_price,
+            "sell_price": sell_target,
             "cost": buy_cost,
             "revenue": revenue,
             "profit": profit,
@@ -391,13 +393,22 @@ def on_message(ws, message):
             w_end = w_start + 300
             seconds_left = int(w_end - now_ts)
             
-            # Final 11s Window and Strict $0.98 Entry
-            if 1 <= seconds_left <= 11:
-                if up_price == BUY_TARGET_PRICE and up_size >= MIN_SHARES:
-                    log(f"[TRIGGER] UP @ ${up_price:.4f} with {seconds_left}s left")
+            # Condition 1: Between 23s and 15s, if there is strong momentum, stake!
+            if 15 <= seconds_left <= 23:
+                if up_price in (0.96, 0.97, 0.98) and up_size >= MIN_SHARES:
+                    log(f"[STRONG MOMENTUM TRIGGER] UP @ ${up_price:.4f} with {seconds_left}s left")
                     execute_option_a_trade("UP", up_id, up_price, up_size)
-                elif down_price == BUY_TARGET_PRICE and down_size >= MIN_SHARES:
-                    log(f"[TRIGGER] DOWN @ ${down_price:.4f} with {seconds_left}s left")
+                elif down_price in (0.96, 0.97, 0.98) and down_size >= MIN_SHARES:
+                    log(f"[STRONG MOMENTUM TRIGGER] DOWN @ ${down_price:.4f} with {seconds_left}s left")
+                    execute_option_a_trade("DOWN", down_id, down_price, down_size)
+            
+            # Condition 2: Final 11s Window Entry
+            elif 1 <= seconds_left <= 11:
+                if up_price in (0.97, 0.98, 0.99) and up_size >= MIN_SHARES:
+                    log(f"[FINAL 11S TRIGGER] UP @ ${up_price:.4f} with {seconds_left}s left")
+                    execute_option_a_trade("UP", up_id, up_price, up_size)
+                elif down_price in (0.97, 0.98, 0.99) and down_size >= MIN_SHARES:
+                    log(f"[FINAL 11S TRIGGER] DOWN @ ${down_price:.4f} with {seconds_left}s left")
                     execute_option_a_trade("DOWN", down_id, down_price, down_size)
     except Exception as e:
         pass
@@ -530,13 +541,18 @@ def bot_loop():
                     log(f"[FLOW] UP: ${up_p:.4f} (Sz: {up_sz:.1f}) | DN: ${dn_p:.4f} (Sz: {dn_sz:.1f}) | Combined: ${(up_p+dn_p):.4f}{delta_str}")
                     last_flow_time = now_ts
                     
-                    # Trigger check: Final 11s Window and Strict $0.98 Entry
+                    # Trigger check: 23s-15s strong momentum or final 11s window
                     w_start_cur = int(now_ts // 300) * 300
                     seconds_left_cur = int((w_start_cur + 300) - now_ts)
-                    if 1 <= seconds_left_cur <= 11:
-                        if up_p == BUY_TARGET_PRICE and up_sz >= MIN_SHARES:
+                    if 15 <= seconds_left_cur <= 23:
+                        if up_p in (0.96, 0.97, 0.98) and up_sz >= MIN_SHARES:
                             execute_option_a_trade("UP", up_id, up_p, up_sz)
-                        elif dn_p == BUY_TARGET_PRICE and dn_sz >= MIN_SHARES:
+                        elif dn_p in (0.96, 0.97, 0.98) and dn_sz >= MIN_SHARES:
+                            execute_option_a_trade("DOWN", down_id, dn_p, dn_sz)
+                    elif 1 <= seconds_left_cur <= 11:
+                        if up_p in (0.97, 0.98, 0.99) and up_sz >= MIN_SHARES:
+                            execute_option_a_trade("UP", up_id, up_p, up_sz)
+                        elif dn_p in (0.97, 0.98, 0.99) and dn_sz >= MIN_SHARES:
                             execute_option_a_trade("DOWN", down_id, dn_p, dn_sz)
                             
             time.sleep(0.5)
