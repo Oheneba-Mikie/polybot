@@ -221,7 +221,7 @@ def get_token_shares_balance(token_id):
         return 0.0
 
 
-def dump_shares_market(token_id, shares_amount, reason_tag="BAILOUT"):
+def dump_shares_market(token_id, shares_amount, floor_price=0.940, reason_tag="BAILOUT"):
     if not client:
         return False
     
@@ -237,15 +237,15 @@ def dump_shares_market(token_id, shares_amount, reason_tag="BAILOUT"):
             return True
             
         try:
-            log(f"🚨 EXECUTING MARKET SWEEP DUMP (Attempt {attempt} | {reason_tag}): Dumping {sh_to_dump:.2f} shares immediately...")
+            log(f"🚨 EXECUTING PROTECTED DUMP (Attempt {attempt} | {reason_tag} | Floor: ${floor_price:.3f}): Dumping {sh_to_dump:.2f} shares...")
             client.create_and_post_market_order(
-                MarketOrderArgsV2(token_id=token_id, amount=sh_to_dump, price=0.01, side="SELL", order_type=OrderType.FAK),
+                MarketOrderArgsV2(token_id=token_id, amount=sh_to_dump, price=floor_price, side="SELL", order_type=OrderType.FAK),
                 order_type=OrderType.FAK
             )
             time.sleep(0.4)
             remaining = get_token_shares_balance(token_id)
             if remaining < 0.1:
-                log(f"✅ MARKET DUMP SUCCESS: All {sh_to_dump:.2f} shares confirmed dumped for cash on-chain.")
+                log(f"✅ DUMP SUCCESS: All {sh_to_dump:.2f} shares confirmed dumped on-chain above ${floor_price:.3f}.")
                 return True
             else:
                 log(f"⚠️ Partial fill: {remaining:.2f} shares remaining. Retrying dump...")
