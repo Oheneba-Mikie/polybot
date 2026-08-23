@@ -256,16 +256,16 @@ def dump_shares_market(token_id, shares_amount, floor_price=0.940, reason_tag="B
     return False
 
 
-def manage_position_loop(token_id, side_name, entry_price, shares_amount, candle_end):
+def manage_position_loop(token_id, side_name, entry_price, shares_amount, candle_end, target_profit_bid=0.980, stop_loss_min_bid=0.950, dump_floor=0.945):
     """
     Dedicated, isolated Position Guardian.
-    Monitors held position and guarantees 100% exit via Profit (0.98), Stop Loss (<0.95), Timeout (40s), or Pre-Close (T-10s).
+    Monitors held position and guarantees 100% exit via Profit, Stop Loss, Timeout (40s), or Pre-Close (T-10s).
     """
     global bot_bankroll
     from py_clob_client_v2 import MarketOrderArgsV2, OrderType
     
     entry_time = time.time()
-    log(f"🛡️ POSITION GUARDIAN ACTIVE: Holding {shares_amount:.2f} shares of {side_name} (Entry: ${entry_price:.4f}). Managing exit...")
+    log(f"🛡️ POSITION GUARDIAN ACTIVE: Holding {shares_amount:.2f} shares of {side_name} (Entry: ${entry_price:.4f} | Target: ${target_profit_bid:.3f} | Floor: ${dump_floor:.3f}). Managing exit...")
     bot_state["held_position"] = f"{shares_amount:.2f} {side_name} @ ${entry_price:.2f}"
 
     while True:
@@ -274,14 +274,14 @@ def manage_position_loop(token_id, side_name, entry_price, shares_amount, candle
         
         _, live_bid = probe_book(token_id)
         
-        # 1. PROFIT EXIT: Live bid reached target (>= 0.98)
-        if live_bid and live_bid >= TARGET_SELL_PROFIT_BID:
-            log(f"🎉 PROFIT TARGET HIT! Live Bid is ${live_bid:.4f}. Selling all shares...")
+        # 1. PROFIT EXIT: Live bid reached target
+        if live_bid and live_bid >= target_profit_bid:
+            log(f"🎉 PROFIT TARGET HIT! Live Bid is ${live_bid:.4f} >= ${target_profit_bid:.3f}. Selling all shares...")
             try:
                 live_sh = get_token_shares_balance(token_id)
                 sh_to_sell = math.floor(live_sh * 100.0) / 100.0 if live_sh >= 0.1 else math.floor(shares_amount * 100.0) / 100.0
                 client.create_and_post_market_order(
-                    MarketOrderArgsV2(token_id=token_id, amount=sh_to_sell, price=0.01, side="SELL", order_type=OrderType.FAK),
+                    MarketOrderArgsV2(token_id=token_id, amount=sh_to_sell, price=target_profit_bid - 0.01, side="SELL", order_type=OrderType.FAK),
                     order_type=OrderType.FAK
                 )
                 profit_per_share = live_bid - entry_price
@@ -303,14 +303,14 @@ def manage_position_loop(token_id, side_name, entry_price, shares_amount, candle
             except Exception as e:
                 log(f"Sell order error: {e}")
 
-        # 2. EMERGENCY STOP LOSS: Bid dropped below 0.95
-        elif live_bid and live_bid < STOP_LOSS_MIN_BID:
-            log(f"🚨 STOP LOSS TRIGGERED: Bid dropped to ${live_bid:.4f}. Dumping immediately to preserve capital...")
-            dump_shares_market(token_id, shares_amount, reason_tag="STOP_LOSS")
-            loss_usdc = round(shares_amount * (entry_price - live_bid), 4)
-            bot_bankroll = max(4.85, round(bot_bankroll - loss_usdc, 4))
+        # 2. EMERGENCY STOP LOSS: Bid dropped below stop loss threshold
+        elif live_bid and live_bid < stop_loss_min_bid:
+            log(f"🚨 STOP LOSS TRIGGERED: Bid dropped to ${live_bid:.4f} < ${stop_loss_min_bid:.3f}. Dumping above floor ${dump_floor:.3f}...")
+            dump_shares_market(token_id, shares_amount, floor_price=dump_floor, reason_tag="STOP_LOSS")
+            loss_usdc = round(shares_amount * (entry_price - max(live_bid, dump_floor)), 4)
+            bot_bankroll = max(4.00, round(bot_bankroll - loss_usdc, 4))
             bot_state["bot_bankroll"] = bot_bankroll
-            log(f"🛡️ CAPITAL PRESERVED: Dumped @ ${live_bid:.4f} (Saved 95%+ of principal, loss: -${loss_usdc:.4f}) | Bot Bankroll: ${bot_bankroll:.2f}")
+            log(f"🛡️ CAPITAL PRESERVED: Dumped (Loss capped at -${loss_usdc:.4f}) | Bot Bankroll: ${bot_bankroll:.2f}")
             bot_state["losses"] += 1
             bot_state["streak"] = 0
             bot_state["held_position"] = None
@@ -318,17 +318,15 @@ def manage_position_loop(token_id, side_name, entry_price, shares_amount, candle
 
         # 3. 40-SECOND TIMEOUT BAILOUT: Market stalled
         elif elapsed >= BAILOUT_TIMEOUT_SECONDS:
-            dump_bid = live_bid or 0.01
-            log(f"⏰ 40s TIMEOUT BAILOUT: Market stalled after {elapsed:.1f}s. Dumping {shares_amount:.2f} shares at market...")
-            dump_shares_market(token_id, shares_amount, reason_tag="TIMEOUT_40S")
+            log(f"⏰ 40s TIMEOUT BAILOUT: Market stalled after {elapsed:.1f}s. Dumping {shares_amount:.2f} shares above floor ${dump_floor:.3f}...")
+            dump_shares_market(token_id, shares_amount, floor_price=dump_floor, reason_tag="TIMEOUT_40S")
             bot_state["held_position"] = None
             return True
 
         # 4. PRE-CLOSE SAFETY CUTOFF: T-10 seconds before candle ends
         elif time_to_close <= PRE_CLOSE_SAFETY_WINDOW:
-            dump_bid = live_bid or 0.01
             log(f"⚠️ PRE-CLOSE SAFETY CUTOFF: Only {time_to_close:.1f}s left in candle. Dumping {shares_amount:.2f} shares before resolution...")
-            dump_shares_market(token_id, shares_amount, reason_tag="PRE_CLOSE_10S")
+            dump_shares_market(token_id, shares_amount, floor_price=0.50, reason_tag="PRE_CLOSE_10S")
             bot_state["held_position"] = None
             return True
 
@@ -395,8 +393,28 @@ def run_scalper_bot_engine():
                     continue
 
                 # -------------------------------------------------------------
-                # 🎯 ENTRY SCANNING: Look for 97c trigger throughout candle
+                # 🎯 DYNAMIC STRATEGY ENGINE:
+                # - If bankroll / balance < $5.00: Bootstrap Mode (Buy @ 96¢ -> Sell @ 97¢)
+                # - If bankroll / balance >= $5.00: Full Mode (Buy @ 97¢ -> Sell @ 98¢)
                 # -------------------------------------------------------------
+                current_cash = get_live_balance()
+                effective_bankroll = min(bot_bankroll, current_cash) if current_cash > 0 else bot_bankroll
+
+                if effective_bankroll < 5.00 or current_cash < 5.00:
+                    mode_name = "BOOTSTRAP_96_TO_97"
+                    active_entry_min = 0.950
+                    active_entry_max = 0.965
+                    active_target_profit = 0.970
+                    active_stop_loss = 0.940
+                    active_dump_floor = 0.935
+                else:
+                    mode_name = "COMPOUND_97_TO_98"
+                    active_entry_min = 0.968
+                    active_entry_max = 0.978
+                    active_target_profit = 0.980
+                    active_stop_loss = 0.950
+                    active_dump_floor = 0.945
+
                 up_ask, _ = probe_book(up_id)
                 dn_ask, _ = probe_book(dn_id)
 
@@ -404,11 +422,11 @@ def run_scalper_bot_engine():
                 side_name = None
                 entry_ask_price = None
 
-                if up_ask and ENTRY_PRICE_TRIGGER_MIN <= up_ask <= ENTRY_PRICE_TRIGGER_MAX:
+                if up_ask and active_entry_min <= up_ask <= active_entry_max:
                     target_token_id = up_id
                     side_name = "UP"
                     entry_ask_price = up_ask
-                elif dn_ask and ENTRY_PRICE_TRIGGER_MIN <= dn_ask <= ENTRY_PRICE_TRIGGER_MAX:
+                elif dn_ask and active_entry_min <= dn_ask <= active_entry_max:
                     target_token_id = dn_id
                     side_name = "DOWN"
                     entry_ask_price = dn_ask
@@ -417,13 +435,12 @@ def run_scalper_bot_engine():
                     # Atomic Lock: Set candle_traded to True IMMEDIATELY before sending order
                     candle_traded = True
 
-                    current_cash = get_live_balance()
-                    # Isolated Bankroll: Trade using bot_bankroll only, leaving remaining wallet cash untouched
-                    trade_alloc = min(bot_bankroll, current_cash)
-                    stake_amount = max(4.85, math.floor(trade_alloc * 100.0) / 100.0)
+                    # Calculate stake amount (Need at least 5 shares)
+                    min_needed = round(5.0 * entry_ask_price, 2)
+                    stake_amount = max(min_needed, math.floor(effective_bankroll * 100.0) / 100.0)
                     stake_amount = min(stake_amount, current_cash)
 
-                    log(f"⚡ 0.97 ENTRY on {side_name} @ ${entry_ask_price:.4f}! Buying with ${stake_amount:.2f} USDC (Bankroll: ${bot_bankroll:.2f} | Wallet: ${current_cash:.2f})...")
+                    log(f"⚡ {mode_name} ENTRY on {side_name} @ ${entry_ask_price:.4f}! Buying with ${stake_amount:.2f} USDC (Target: ${active_target_profit:.3f} | Bankroll: ${bot_bankroll:.2f} | Wallet: ${current_cash:.2f})...")
 
                     if client:
                         try:
@@ -444,7 +461,16 @@ def run_scalper_bot_engine():
                             log(f"⏱️ BOUGHT {actual_shares:.4f} shares of {side_name} @ ${entry_ask_price:.4f}.")
                             
                             # Immediately hand over control to Position Guardian
-                            manage_position_loop(target_token_id, side_name, entry_ask_price, actual_shares, w_e)
+                            manage_position_loop(
+                                target_token_id, 
+                                side_name, 
+                                entry_ask_price, 
+                                actual_shares, 
+                                w_e,
+                                target_profit_bid=active_target_profit,
+                                stop_loss_min_bid=active_stop_loss,
+                                dump_floor=active_dump_floor
+                            )
                             break
 
                         except Exception as ex:
