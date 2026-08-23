@@ -1,0 +1,90 @@
+{
+  "50/50 Deep (0.47 + 0.47 = $0.94)": {
+    "matched_pairs": 0.0,
+    "unmatched_up_shares": 3236.07,
+    "unmatched_dn_shares": 0,
+    "matched_profit_usd": 0.0,
+    "unmatched_pnl_usd": -1520.9533,
+    "total_net_pnl_usd": -1520.9533,
+    "markets": [
+      {
+        "slug": "will-el-salvador-hold-1b-of-btc-by-by",
+        "winner": "DOWN",
+        "up_filled": 3236.07,
+        "dn_filled": 0.0,
+        "matched_pairs": 0.0,
+        "excess_up": 3236.07,
+        "excess_dn": 0.0,
+        "matched_profit": 0.0,
+        "unmatched_pnl": -1520.9533,
+        "net_pnl": -1520.9533
+      }
+    ]
+  },
+  "50/50 Standard (0.48 + 0.48 = $0.96)": {
+    "matched_pairs": 0.0,
+    "unmatched_up_shares": 3236.07,
+    "unmatched_dn_shares": 0,
+    "matched_profit_usd": 0.0,
+    "unmatched_pnl_usd": -1553.314,
+    "total_net_pnl_usd": -1553.314,
+    "markets": [
+      {
+        "slug": "will-el-salvador-hold-1b-of-btc-by-by",
+        "winner": "DOWN",
+        "up_filled": 3236.07,
+        "dn_filled": 0.0,
+        "matched_pairs": 0.0,
+        "excess_up": 3236.07,
+        "excess_dn": 0.0,
+        "matched_profit": 0.0,
+        "unmatched_pnl": -1553.314,
+        "net_pnl": -1553.314
+      }
+    ]
+  },
+  "Asymmetric 80/20 (0.78 + 0.18 = $0.96)": {
+    "matched_pairs": 0.0,
+    "unmatched_up_shares": 3236.07,
+    "unmatched_dn_shares": 0,
+    "matched_profit_usd": 0.0,
+    "unmatched_pnl_usd": -2524.1352,
+    "total_net_pnl_usd": -2524.1352,
+    "markets": [
+      {
+        "slug": "will-el-salvador-hold-1b-of-btc-by-by",
+        "winner": "DOWN",
+        "up_filled": 3236.07,
+        "dn_filled": 0.0,
+        "matched_pairs": 0.0,
+        "excess_up": 3236.07,
+        "excess_dn": 0.0,
+        "matched_profit": 0.0,
+        "unmatched_pnl": -2524.1352,
+        "net_pnl": -2524.1352
+      }
+    ]
+  },
+  "Late Squeeze (0.90 + 0.08 = $0.98)": {
+    "matched_pairs": 0.0,
+    "unmatched_up_shares": 3236.07,
+    "unmatched_dn_shares": 0,
+    "matched_profit_usd": 0.0,
+    "unmatched_pnl_usd": -2912.4637,
+    "total_net_pnl_usd": -2912.4637,
+    "markets": [
+      {
+        "slug": "will-el-salvador-hold-1b-of-btc-by-by",
+        "winner": "DOWN",
+        "up_filled": 3236.07,
+        "dn_filled": 0.0,
+        "matched_pairs": 0.0,
+        "excess_up": 3236.07,
+        "excess_dn": 0.0,
+        "matched_profit": 0.0,
+        "unmatched_pnl": -2912.4637,
+        "net_pnl": -2912.4637
+      }
+    ]
+  }
+}

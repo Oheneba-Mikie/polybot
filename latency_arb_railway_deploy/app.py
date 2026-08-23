@@ -4,427 +4,238 @@ import time
 import json
 import threading
 import datetime
-from decimal import Decimal
-from flask import Flask, jsonify, render_template
-import websocket
 import requests
+import websocket
+from flask import Flask, jsonify, render_template_string
+from dotenv import load_dotenv
 
-try:
-    from py_clob_client.client import ClobClient
-    from py_clob_client.clob_types import OrderArgs, OrderType
-    from py_clob_client.order_builder.constants import BUY, SELL
-except ImportError:
-    pass
+load_dotenv()
 
-app = Flask(__name__, template_folder="templates")
+# App Configuration & Credentials
+POLYMARKET_PRIVATE_KEY = os.environ.get("POLYMARKET_PRIVATE_KEY")
+POLYMARKET_ADDRESS = os.environ.get("POLYMARKET_ADDRESS")
+POLYMARKET_API_KEY = os.environ.get("POLYMARKET_API_KEY")
+POLYMARKET_API_SECRET = os.environ.get("POLYMARKET_API_SECRET")
+POLYMARKET_API_PASSPHRASE = os.environ.get("POLYMARKET_API_PASSPHRASE")
 
-# ==============================================================================
-# BOT OPTION A: Buy @ $0.98 -> Immediate Limit Sell @ $0.99 (Scavenger Flip)
-# ==============================================================================
+MAX_TEST_SHARES = 1 # Strictly 1 share per trade ($0.97 - $0.99)
+TEST_BUDGET_CAP = 1.00 # Max $1.00 budget per candle
 
-BUY_TARGET_PRICE = 0.98
-SELL_TARGET_PRICE = 0.99
-MIN_SHARES = 1
-POLYMARKET_ADDRESS = os.getenv("POLYMARKET_ADDRESS")
-POLYMARKET_API_KEY = os.getenv("POLYMARKET_API_KEY")
-POLYMARKET_API_SECRET = os.getenv("POLYMARKET_API_SECRET")
-POLYMARKET_API_PASSPHRASE = os.getenv("POLYMARKET_API_PASSPHRASE")
-POLYMARKET_PRIVATE_KEY = os.getenv("POLYMARKET_PRIVATE_KEY") or os.getenv("PRIVATE_KEY")
-
-bot_state = {
-    "name": "Bot Option A (Buy 0.98 -> Sell 0.99 Flip)",
-    "status": "Initializing",
-    "mode": "LIVE" if POLYMARKET_PRIVATE_KEY else "PAPER TRADING",
+# Global State
+state = {
+    "bot_name": "PolyMirror (Dying-Side Inverter)",
+    "status": "INITIALIZING",
     "current_slug": None,
-    "ptb": None,
-    "btc_price": None,
-    "delta": None,
-    "up_ask": None,
-    "down_ask": None,
-    "up_size": 0.0,
-    "down_size": 0.0,
-    "balance": 0.0,
+    "seconds_left": 0,
+    "up_id": None,
+    "down_id": None,
+    "up_ask": 0.0,
+    "down_ask": 0.0,
+    "trades": [],
+    "total_wins": 0,
+    "total_losses": 0,
     "total_trades": 0,
-    "total_profit_usdc": 0.0,
-    "active_position": None,
-    "logs": [],
-    "history": []
+    "logs": []
 }
 
-log_lock = threading.Lock()
-def log(msg):
-    ts = datetime.datetime.now(datetime.timezone.utc).strftime("%H:%M:%S.%f")[:-3]
-    entry = f"[{ts}] {msg}"
-    print(entry, flush=True)
-    with log_lock:
-        bot_state["logs"].append(entry)
-        if len(bot_state["logs"]) > 250:
-            bot_state["logs"].pop(0)
-
-# Import and Initialize CLOB Client using exact off_peak_5mins_hybrid_sprint.py logic
-clob_client = None
-if POLYMARKET_PRIVATE_KEY and POLYMARKET_API_KEY:
-    try:
-        from py_clob_client_v2 import ClobClient, ApiCreds
-        from eth_account import Account
-        
-        eoa_address = Account.from_key(POLYMARKET_PRIVATE_KEY).address
-        sig_type = 0
-        funder_addr = None
-        if POLYMARKET_ADDRESS and POLYMARKET_ADDRESS.lower() != eoa_address.lower():
-            sig_type = 3
-            funder_addr = POLYMARKET_ADDRESS
-
-        creds = ApiCreds(
-            api_key=POLYMARKET_API_KEY,
-            api_secret=POLYMARKET_API_SECRET,
-            api_passphrase=POLYMARKET_API_PASSPHRASE
-        )
-        clob_client = ClobClient(
-            host="https://clob.polymarket.com",
-            chain_id=137,
-            key=POLYMARKET_PRIVATE_KEY,
-            creds=creds,
-            signature_type=sig_type,
-            funder=funder_addr
-        )
-        log(f"[AUTH] ✅ Authenticated with Polymarket CLOB. Proxy: {funder_addr}")
-    except Exception as e:
-        log(f"[AUTH ERROR] ❌ Error initializing CLOB client: {e}")
-
-def get_live_balance():
-    if clob_client is not None:
-        try:
-            from py_clob_client_v2.clob_types import BalanceAllowanceParams, AssetType
-            params = BalanceAllowanceParams(asset_type=AssetType.COLLATERAL)
-            resp = clob_client.get_balance_allowance(params)
-            raw_bal = float(resp.get("balance", 0))
-            bal = raw_bal / 1_000_000.0
-            return bal
-        except Exception as e:
-            log(f"[BALANCE ERROR] ⚠️ Error fetching live balance: {e}")
-    return 0.0
-
-# Pure Polymarket Chainlink Live Oracle WebSocket (No external exchanges)
-class PolymarketLiveOracle:
-    def __init__(self):
-        self.ws_url = "wss://ws-live-data.polymarket.com/"
-        self.live_btc_price = None
-        self.ws = None
-        self.lock = threading.Lock()
-
-    def start(self):
-        threading.Thread(target=self._run, daemon=True).start()
-
-    def get_price(self):
-        with self.lock:
-            return self.live_btc_price
-
-    def _run(self):
-        while True:
-            try:
-                self.ws = websocket.WebSocketApp(
-                    self.ws_url,
-                    on_message=self._on_message,
-                    on_open=self._on_open,
-                    on_error=lambda ws, e: None,
-                    on_close=lambda ws, c, m: None
-                )
-                self.ws.run_forever(ping_interval=15, ping_timeout=5)
-            except Exception:
-                pass
-            time.sleep(1)
-
-    def _on_open(self, ws):
-        sub_msg = {"action": "subscribe", "topic": "crypto_prices_chainlink", "payload": {"symbol": "btc/usd"}}
-        ws.send(json.dumps(sub_msg))
-
-    def _on_message(self, ws, message):
-        try:
-            data = json.loads(message)
-            if data.get("topic") == "crypto_prices_chainlink":
-                payload = data.get("payload", {})
-                symbol = payload.get("symbol", "").lower()
-                val = payload.get("value")
-                if symbol == "btc/usd" and val is not None:
-                    with self.lock:
-                        self.live_btc_price = float(val)
-        except Exception:
-            pass
-
-chainlink_feed = PolymarketLiveOracle()
-chainlink_feed.start()
-
-# WebSocket & Order Book Management
-ws_client = None
-ws_lock = threading.Lock()
-up_id = None
-down_id = None
-current_ptb = None
-cycle_traded = False
-
+state_lock = threading.Lock()
 order_books = {}
-prices = {}
+cycle_traded = False
+ws_lock = threading.Lock()
 
-def get_market_data(slug):
-    try:
-        r = requests.get(f"https://gamma-api.polymarket.com/events?slug={slug}", timeout=5).json()
-        if not r or "markets" not in r[0]:
-            return None, None, None, None
-        m = r[0]["markets"][0]
-        token_ids = json.loads(m["clobTokenIds"])
-        outcomes = json.loads(m["outcomes"])
-        u_id, d_id = None, None
-        for i, o in enumerate(outcomes):
-            if str(o).lower() in ("up", "yes"):
-                u_id = token_ids[i]
-            else:
-                d_id = token_ids[i]
-        
-        ptb_val = None
-        for f in ("strikePrice", "priceToBeat", "targetPrice"):
-            if m.get(f) is not None:
-                try:
-                    ptb_val = float(m[f])
-                    break
-                except:
-                    pass
-        return u_id, d_id, ptb_val, m.get("conditionId")
-    except Exception as e:
-        log(f"[METADATA ERROR] {e}")
-        return None, None, None, None
+def log(msg):
+    now_str = datetime.datetime.now(datetime.timezone.utc).strftime("%H:%M:%S.%f")[:-3]
+    entry = f"[{now_str}] {msg}"
+    print(entry, flush=True)
+    with state_lock:
+        state["logs"].append(entry)
+        if len(state["logs"]) > 200:
+            state["logs"].pop(0)
 
-def execute_option_a_trade(side_name, token_id, ask_price, ask_size):
+# Initialize CLOB Client
+clob_client = None
+try:
+    from py_clob_client.client import ClobClient
+    from py_clob_client.clob_types import ApiCreds, OrderArgs
+    from py_clob_client.order_builder.constants import BUY
+    
+    creds = ApiCreds(
+        api_key=POLYMARKET_API_KEY,
+        api_secret=POLYMARKET_API_SECRET,
+        api_passphrase=POLYMARKET_API_PASSPHRASE
+    )
+    clob_client = ClobClient(
+        host="https://clob.polymarket.com",
+        chain_id=137,
+        key=POLYMARKET_PRIVATE_KEY,
+        creds=creds,
+        signature_type=2,
+        funder=POLYMARKET_ADDRESS
+    )
+    log(f"[AUTH] Successfully authenticated with Polymarket CLOB. Proxy: {POLYMARKET_ADDRESS}")
+except Exception as e:
+    log(f"[AUTH ERROR] Failed to initialize CLOB client: {e}")
+
+def execute_opposite_trade(trigger_side, target_side, token_id, ask_price, ask_size):
     global cycle_traded
     if cycle_traded:
         return
     
-    # Calculate share size from 50% wallet allocation (shared between Bot A and Bot B)
-    current_bal = bot_state["balance"]
-    bot_allocation = current_bal * 0.50
-    exec_price = ask_price if ask_price else BUY_TARGET_PRICE
-    max_affordable = int(bot_allocation / exec_price)
-    max_available = int(ask_size)
-    target_shares = min(max_affordable, max_available)
-    
-    if target_shares < MIN_SHARES:
-        log(f"[SKIP] Target shares {target_shares} < minimum {MIN_SHARES} shares.")
-        return
-    
     cycle_traded = True
-    buy_cost = target_shares * exec_price
-    log(f"[OPTION A TRIGGER] Detected {side_name} @ ${exec_price:.4f} (Depth: {ask_size:.1f} shares)")
-    log(f"[EXECUTE STEP 1] Buying {target_shares} shares of {side_name} @ ${exec_price:.2f} (Cost: ${buy_cost:.2f})")
+    shares_to_buy = min(MAX_TEST_SHARES, max(1, int(ask_size)))
+    cost = shares_to_buy * ask_price
     
-    order_id = f"BUY-OPT-A-{int(time.time()*1000)}"
-    buy_success = False
+    log("=" * 70)
+    log(f"⚡ [OPPOSITE TRIGGER] Detected Losing Side ({trigger_side} <= 0.05)!")
+    log(f"🎯 [OPPOSITE BUY] Staking ON OPPOSITE WINNER ({target_side}) -> {shares_to_buy} shares @ ${ask_price:.2f} (Total Cost: ${cost:.2f})")
+    log("=" * 70)
     
-    if clob_client and bot_state["mode"] == "LIVE":
+    trade_record = {
+        "time": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC"),
+        "trigger_side": trigger_side,
+        "bought_side": target_side,
+        "shares": shares_to_buy,
+        "price": ask_price,
+        "cost": cost,
+        "status": "SUBMITTING",
+        "order_id": None
+    }
+    
+    if clob_client:
         try:
-            from py_clob_client_v2.clob_types import OrderArgs
-            from py_clob_client_v2.order_builder.constants import BUY
             buy_args = OrderArgs(
-                price=exec_price,
-                size=float(target_shares),
+                price=ask_price,
+                size=float(shares_to_buy),
                 side=BUY,
                 token_id=token_id
             )
             res = clob_client.create_and_post_order(buy_args)
-            if res and (res.get("orderID") or res.get("success")):
-                order_id = res.get("orderID") or str(res)
-                buy_success = True
-                log(f"[SUCCESS STEP 1] Buy Order Placed & Filled! ID: {order_id}")
-            else:
-                log(f"[ORDER FAILED] Buy Order response: {res}")
+            log(f"✅ [SUCCESS] Order Placed! Response: {res}")
+            trade_record["status"] = "FILLED"
+            trade_record["order_id"] = str(res.get("orderID", "FILLED"))
         except Exception as e:
-            log(f"[ORDER ERROR STEP 1] {e}")
+            log(f"❌ [ORDER ERROR] {e}")
+            trade_record["status"] = f"ERROR: {e}"
     else:
-        # Paper trading execution
-        buy_success = True
-        log(f"[PAPER STEP 1] Simulated BUY {target_shares} shares @ ${BUY_TARGET_PRICE:.2f} filled.")
+        log(f"📝 [SIMULATED] Would have bought {shares_to_buy} of {target_side} @ ${ask_price:.2f}")
+        trade_record["status"] = "SIMULATED"
         
-    if buy_success:
-        bot_state["balance"] -= buy_cost
-        
-        # STEP 2: Immediately Place Limit Sell Order at $0.99
-        log(f"[EXECUTE STEP 2] Digging SELL HOLE: Posting Limit Sell for {target_shares} {side_name} @ ${SELL_TARGET_PRICE:.2f}...")
-        sell_order_id = f"SELL-OPT-A-{int(time.time()*1000)}"
-        sell_placed = False
-        
-        if clob_client and bot_state["mode"] == "LIVE":
-            try:
-                from py_clob_client_v2.clob_types import OrderArgs
-                from py_clob_client_v2.order_builder.constants import SELL
-                sell_args = OrderArgs(
-                    price=SELL_TARGET_PRICE,
-                    size=float(target_shares),
-                    side=SELL,
-                    token_id=token_id
-                )
-                s_res = clob_client.create_and_post_order(sell_args)
-                if s_res and (s_res.get("orderID") or s_res.get("success")):
-                    sell_order_id = s_res.get("orderID") or str(s_res)
-                    sell_placed = True
-                    log(f"[SUCCESS STEP 2] Limit Sell Hole Active at ${SELL_TARGET_PRICE:.2f}! ID: {sell_order_id}")
-                else:
-                    log(f"[SELL HOLE FAILED] {s_res}")
-            except Exception as e:
-                log(f"[SELL HOLE ERROR] {e}")
-        else:
-            sell_placed = True
-            log(f"[PAPER STEP 2] Simulated Limit Sell active at ${SELL_TARGET_PRICE:.2f}.")
-            
-        # Register trade record and complete flip simulation / tracking
-        sell_target = SELL_TARGET_PRICE if exec_price < SELL_TARGET_PRICE else 1.00
-        revenue = target_shares * sell_target
-        profit = revenue - buy_cost
-        bot_state["balance"] += revenue
-        bot_state["total_trades"] += 1
-        bot_state["total_profit_usdc"] += profit
-        
-        trade_record = {
-            "time": datetime.datetime.now(datetime.timezone.utc).strftime("%H:%M:%S"),
-            "side": side_name,
-            "shares": target_shares,
-            "buy_price": exec_price,
-            "sell_price": sell_target,
-            "cost": buy_cost,
-            "revenue": revenue,
-            "profit": profit,
-            "balance": bot_state["balance"],
-            "order_id": order_id[:12] + "..."
-        }
-        bot_state["history"].insert(0, trade_record)
-        log(f"[PROFIT LOCKED] Sold @ ${SELL_TARGET_PRICE:.2f}! Profit: +${profit:.4f} USDC | New Rollover Balance: ${bot_state['balance']:.2f}")
+    with state_lock:
+        state["trades"].append(trade_record)
+        state["total_trades"] += 1
 
-def on_message(ws, message):
-    global prices, up_id, down_id, ws_client, order_books
-    ws_client = ws
-    if message == "PONG":
-        return
-    try:
-        data = json.loads(message)
-        items = data if isinstance(data, list) else [data]
-        updated = False
-        
-        for item in items:
-            ev_type = item.get("event_type") or item.get("type")
-            asset_id = str(item.get("asset_id") or "")
-            
-            with ws_lock:
-                if asset_id not in (up_id, down_id):
-                    continue
-                if asset_id not in order_books:
-                    order_books[asset_id] = {"asks": {}, "bids": {}}
-                
-            if ev_type == "book" or "asks" in item:
-                asks = item.get("asks", [])
-                order_books[asset_id]["asks"] = {
-                    float(a["price"]): float(a.get("size", 0.0))
-                    for a in asks if float(a.get("size", 0.0)) > 0
-                }
-                bids = item.get("bids", [])
-                order_books[asset_id]["bids"] = {
-                    float(b["price"]): float(b.get("size", 0.0))
-                    for b in bids if float(b.get("size", 0.0)) > 0
-                }
-                updated = True
-                
-            elif ev_type == "price_change":
-                changes = item.get("price_changes", []) or [item]
-                for ch in changes:
-                    p = ch.get("price")
-                    sz = ch.get("size")
-                    side = str(ch.get("side", "")).upper()
-                    if p is not None and sz is not None:
-                        price_flt = float(p)
-                        size_flt = float(sz)
-                        if side in ("SELL", "ASK"):
-                            if size_flt <= 0:
-                                order_books[asset_id]["asks"].pop(price_flt, None)
-                            else:
-                                order_books[asset_id]["asks"][price_flt] = size_flt
-                            updated = True
-                        elif side in ("BUY", "BID"):
-                            if size_flt <= 0:
-                                order_books[asset_id]["bids"].pop(price_flt, None)
-                            else:
-                                order_books[asset_id]["bids"][price_flt] = size_flt
-                            updated = True
-            
-            if updated and asset_id in order_books and order_books[asset_id]["asks"]:
-                min_ask = min(order_books[asset_id]["asks"].keys())
-                min_sz = order_books[asset_id]["asks"][min_ask]
-                prices[asset_id] = {"price": min_ask, "size": min_sz}
-                        
-        with ws_lock:
-            if not up_id or not down_id:
-                return
-            up_price = prices.get(up_id, {}).get("price")
-            up_size = prices.get(up_id, {}).get("size", 0.0)
-            down_price = prices.get(down_id, {}).get("price")
-            down_size = prices.get(down_id, {}).get("size", 0.0)
-
-        if updated and up_price is not None and down_price is not None:
-            combined = up_price + down_price
-            bot_state["status"] = "Active Scanning"
-            bot_state["up_ask"] = up_price
-            bot_state["up_size"] = up_size
-            bot_state["down_ask"] = down_price
-            bot_state["down_size"] = down_size
-            
-            live_btc = chainlink_feed.get_price()
-            delta_str = ""
-            if live_btc is not None and current_ptb is not None:
-                delta = live_btc - current_ptb
-                bot_state["btc_price"] = live_btc
-                bot_state["ptb"] = current_ptb
-                bot_state["delta"] = delta
-                direction = "▲ UP" if delta >= 0 else "▼ DN"
-                delta_str = f" | BTC: ${live_btc:,.2f} | PTB: ${current_ptb:,.2f} (Diff: {delta:+.2f} {direction})"
-            elif live_btc is not None:
-                bot_state["btc_price"] = live_btc
-                delta_str = f" | BTC: ${live_btc:,.2f}"
-            
-            log(f"[FLOW] UP: ${up_price:.4f} (Sz: {up_size:.1f}) | DN: ${down_price:.4f} (Sz: {down_size:.1f}) | Combined: ${combined:.4f}{delta_str}")
-            
+# Background Continuous Scanner Loop with Direct REST Fallback
+def scan_loop():
+    global cycle_traded, order_books
+    last_log_sec = None
+    headers = {"User-Agent": "Mozilla/5.0"}
+    
+    while True:
+        try:
             now_ts = time.time()
             w_start = int(now_ts // 300) * 300
             w_end = w_start + 300
             seconds_left = int(w_end - now_ts)
             
-            # Condition 1: Between 23s and 15s, if there is strong momentum, stake!
-            if 15 <= seconds_left <= 23:
-                if up_price in (0.96, 0.97, 0.98) and up_size >= MIN_SHARES:
-                    log(f"[STRONG MOMENTUM TRIGGER] UP @ ${up_price:.4f} with {seconds_left}s left")
-                    execute_option_a_trade("UP", up_id, up_price, up_size)
-                elif down_price in (0.96, 0.97, 0.98) and down_size >= MIN_SHARES:
-                    log(f"[STRONG MOMENTUM TRIGGER] DOWN @ ${down_price:.4f} with {seconds_left}s left")
-                    execute_option_a_trade("DOWN", down_id, down_price, down_size)
+            with state_lock:
+                state["seconds_left"] = seconds_left
+                up_id = state.get("up_id")
+                down_id = state.get("down_id")
             
-            # Condition 2: Final 11s Window Entry
-            elif 1 <= seconds_left <= 11:
-                if up_price in (0.97, 0.98, 0.99) and up_size >= MIN_SHARES:
-                    log(f"[FINAL 11S TRIGGER] UP @ ${up_price:.4f} with {seconds_left}s left")
-                    execute_option_a_trade("UP", up_id, up_price, up_size)
-                elif down_price in (0.97, 0.98, 0.99) and down_size >= MIN_SHARES:
-                    log(f"[FINAL 11S TRIGGER] DOWN @ ${down_price:.4f} with {seconds_left}s left")
-                    execute_option_a_trade("DOWN", down_id, down_price, down_size)
-    except Exception as e:
+            if up_id and down_id:
+                min_up_ask = None
+                min_up_sz = 1
+                min_down_ask = None
+                min_down_sz = 1
+                
+                # Fetch instant REST order book during the final 20 seconds
+                if seconds_left <= 20 and not cycle_traded:
+                    try:
+                        r_up = requests.get(f"https://clob.polymarket.com/book?token_id={up_id}", headers=headers, timeout=1.5).json()
+                        r_dn = requests.get(f"https://clob.polymarket.com/book?token_id={down_id}", headers=headers, timeout=1.5).json()
+                        
+                        up_asks_list = r_up.get("asks", [])
+                        if up_asks_list:
+                            min_up_ask = min([float(x["price"]) for x in up_asks_list])
+                            min_up_sz = float([x["size"] for x in up_asks_list if float(x["price"]) == min_up_ask][0])
+                            
+                        dn_asks_list = r_dn.get("asks", [])
+                        if dn_asks_list:
+                            min_down_ask = min([float(x["price"]) for x in dn_asks_list])
+                            min_down_sz = float([x["size"] for x in dn_asks_list if float(x["price"]) == min_down_ask][0])
+                    except Exception:
+                        pass
+                
+                # Fallback to WebSocket cache
+                if min_up_ask is None or min_down_ask is None:
+                    with ws_lock:
+                        up_asks = order_books.get(up_id, {}).get("asks", {})
+                        down_asks = order_books.get(down_id, {}).get("asks", {})
+                        if up_asks:
+                            min_up_ask = min(up_asks.keys())
+                            min_up_sz = up_asks[min_up_ask]
+                        if down_asks:
+                            min_down_ask = min(down_asks.keys())
+                            min_down_sz = down_asks[min_down_ask]
+                            
+                with state_lock:
+                    if min_up_ask is not None:
+                        state["up_ask"] = min_up_ask
+                    if min_down_ask is not None:
+                        state["down_ask"] = min_down_ask
+                
+                # Log status in the final 25 seconds
+                if seconds_left <= 25 and seconds_left != last_log_sec and min_up_ask is not None and min_down_ask is not None:
+                    last_log_sec = seconds_left
+                    log(f"[SCAN {seconds_left}s left] UP: ${min_up_ask:.4f} | DN: ${min_down_ask:.4f} | Traded: {cycle_traded}")
+                
+                # THE OPPOSITE STAKING TRIGGER IN THE FINAL 15 SECONDS:
+                if 1 <= seconds_left <= 15 and not cycle_traded:
+                    if min_up_ask is not None and min_up_ask <= 0.05 and min_down_ask is not None and min_down_ask >= 0.90:
+                        execute_opposite_trade("UP", "DOWN", down_id, min_down_ask, min_down_sz)
+                    elif min_down_ask is not None and min_down_ask <= 0.05 and min_up_ask is not None and min_up_ask >= 0.90:
+                        execute_opposite_trade("DOWN", "UP", up_id, min_up_ask, min_up_sz)
+                        
+        except Exception as e:
+            log(f"[SCAN EXCEPTION] {e}")
+            
+        time.sleep(0.3)
+
+# WebSocket Feed Handler
+def on_message(ws, message):
+    global order_books
+    if message == "PONG":
+        return
+    try:
+        data = json.loads(message)
+        items = data if isinstance(data, list) else [data]
+        with ws_lock:
+            for item in items:
+                asset_id = item.get("asset_id")
+                if not asset_id:
+                    continue
+                if asset_id not in order_books:
+                    order_books[asset_id] = {"asks": {}, "bids": {}}
+                    
+                price_flt = float(item.get("price", 0))
+                size_flt = float(item.get("size", 0))
+                side = item.get("side", "").upper()
+                
+                if side == "SELL":
+                    if size_flt <= 0:
+                        order_books[asset_id]["asks"].pop(price_flt, None)
+                    else:
+                        order_books[asset_id]["asks"][price_flt] = size_flt
+                elif side == "BUY":
+                    if size_flt <= 0:
+                        order_books[asset_id]["bids"].pop(price_flt, None)
+                    else:
+                        order_books[asset_id]["bids"][price_flt] = size_flt
+    except Exception:
         pass
 
 def on_open(ws):
-    global ws_client
-    ws_client = ws
-    log("[BOOK WS] Connected to Polymarket CLOB Book WebSocket.")
-    with ws_lock:
-        if up_id and down_id:
-            sub = {"type": "market", "assets_ids": [up_id, down_id], "custom_feature_enabled": True}
-            try:
-                ws_client.send(json.dumps(sub))
-                log(f"[BOOK WS] Subscribed to Token IDs: ...{up_id[-8:]} / ...{down_id[-8:]}")
-            except Exception as e:
-                log(f"[BOOK WS] Subscription error: {e}")
+    log("[WS] Connected to CLOB WebSocket feed.")
 
 def ws_thread():
     while True:
@@ -432,160 +243,171 @@ def ws_thread():
             ws = websocket.WebSocketApp(
                 "wss://ws-subscriptions-clob.polymarket.com/ws/market",
                 on_open=on_open,
-                on_message=on_message,
-                on_error=lambda ws, e: None,
-                on_close=lambda ws, c, m: None
+                on_message=on_message
             )
             ws.run_forever(ping_interval=10, ping_timeout=5)
         except Exception:
-            pass
-        time.sleep(2)
+            time.sleep(1)
 
-def fetch_initial_book(token_id):
-    try:
-        r = requests.get(f"https://clob.polymarket.com/book?token_id={token_id}", timeout=3).json()
-        asks = r.get("asks", [])
-        bids = r.get("bids", [])
-        with ws_lock:
-            if token_id not in order_books:
-                order_books[token_id] = {"asks": {}, "bids": {}}
-            order_books[token_id]["asks"] = {
-                float(a["price"]): float(a.get("size", 0.0))
-                for a in asks if float(a.get("size", 0.0)) > 0
-            }
-            order_books[token_id]["bids"] = {
-                float(b["price"]): float(b.get("size", 0.0))
-                for b in bids if float(b.get("size", 0.0)) > 0
-            }
-            if order_books[token_id]["asks"]:
-                min_ask = min(order_books[token_id]["asks"].keys())
-                min_sz = order_books[token_id]["asks"][min_ask]
-                prices[token_id] = {"price": min_ask, "size": min_sz}
-    except Exception:
-        pass
-
-def bot_loop():
-    global up_id, down_id, current_ptb, cycle_traded, prices, order_books
-    active_slug = None
-    last_flow_time = 0
-    last_bal_check = 0
+# Main Cycle Synchronizer
+def main_bot_loop():
+    global cycle_traded, order_books
+    current_cycle_id = None
+    headers = {"User-Agent": "Mozilla/5.0"}
+    
+    log("[BOT] PolyMirror bot initialized and starting cycle sync...")
+    with state_lock:
+        state["status"] = "RUNNING"
+        
+    threading.Thread(target=ws_thread, daemon=True).start()
+    threading.Thread(target=scan_loop, daemon=True).start()
     
     while True:
         try:
             now_ts = time.time()
             w_start = int(now_ts // 300) * 300
-            slug = f"btc-updown-5m-{w_start}"
             
-            if slug != active_slug:
-                active_slug = slug
+            if current_cycle_id != w_start:
+                current_cycle_id = w_start
                 cycle_traded = False
-                bot_state["current_slug"] = slug
                 
-                u_id, d_id, ptb_val, cid = get_market_data(slug)
-                if u_id and d_id:
-                    with ws_lock:
-                        up_id, down_id = u_id, d_id
-                        current_ptb = ptb_val or chainlink_feed.get_price()
-                        prices = {up_id: {"price": None, "size": 0.0}, down_id: {"price": None, "size": 0.0}}
-                        order_books = {up_id: {"asks": {}, "bids": {}}, down_id: {"asks": {}, "bids": {}}}
-                    
-                    log(f"\n--- NEW CYCLE: {slug} | PTB: ${current_ptb if current_ptb else 0:,.2f} ---")
-                    
-                    # Fetch initial book snapshots immediately
-                    threading.Thread(target=fetch_initial_book, args=(up_id,), daemon=True).start()
-                    threading.Thread(target=fetch_initial_book, args=(down_id,), daemon=True).start()
-                    
-                    if ws_client:
-                        sub = {"type": "market", "assets_ids": [up_id, down_id], "custom_feature_enabled": True}
-                        try:
-                            ws_client.send(json.dumps(sub))
-                            log(f"[BOOK WS] Subscribed to Token IDs: ...{up_id[-8:]} / ...{down_id[-8:]}")
-                        except Exception as e:
-                            log(f"[BOOK WS] Subscription error: {e}")
-            
-            # Sync real balance periodically using exact get_live_balance() logic
-            if now_ts - last_bal_check > 5:
-                bal = get_live_balance()
-                if bal is not None:
-                    bot_state["balance"] = bal
-                last_bal_check = now_ts
-            
-            # Periodic 1.5s flow logger to keep dashboard active even during market lulls
-            if now_ts - last_flow_time > 1.5 and up_id and down_id:
-                with ws_lock:
-                    up_p = prices.get(up_id, {}).get("price")
-                    up_sz = prices.get(up_id, {}).get("size", 0.0)
-                    dn_p = prices.get(down_id, {}).get("price")
-                    dn_sz = prices.get(down_id, {}).get("size", 0.0)
+                slug = f"btc-updown-5m-{w_start}"
+                log(f"\n==================== NEW 5M CANDLE: {slug} ====================")
                 
-                live_btc = chainlink_feed.get_price()
-                if live_btc and current_ptb:
-                    delta = live_btc - current_ptb
-                    bot_state["btc_price"] = live_btc
-                    bot_state["ptb"] = current_ptb
-                    bot_state["delta"] = delta
-                    direction = "▲ UP" if delta >= 0 else "▼ DN"
-                    delta_str = f" | BTC: ${live_btc:,.2f} | PTB: ${current_ptb:,.2f} (Diff: {delta:+.2f} {direction})"
-                elif live_btc:
-                    bot_state["btc_price"] = live_btc
-                    delta_str = f" | BTC: ${live_btc:,.2f}"
-                else:
-                    delta_str = ""
+                with state_lock:
+                    state["current_slug"] = slug
                 
-                if up_p is not None and dn_p is not None:
-                    bot_state["status"] = "Active Scanning"
-                    bot_state["up_ask"] = up_p
-                    bot_state["up_size"] = up_sz
-                    bot_state["down_ask"] = dn_p
-                    bot_state["down_size"] = dn_sz
-                    log(f"[FLOW] UP: ${up_p:.4f} (Sz: {up_sz:.1f}) | DN: ${dn_p:.4f} (Sz: {dn_sz:.1f}) | Combined: ${(up_p+dn_p):.4f}{delta_str}")
-                    last_flow_time = now_ts
-                    
-                    # Trigger check: 23s-15s strong momentum or final 11s window
-                    w_start_cur = int(now_ts // 300) * 300
-                    seconds_left_cur = int((w_start_cur + 300) - now_ts)
-                    if 15 <= seconds_left_cur <= 23:
-                        if up_p in (0.96, 0.97, 0.98) and up_sz >= MIN_SHARES:
-                            execute_option_a_trade("UP", up_id, up_p, up_sz)
-                        elif dn_p in (0.96, 0.97, 0.98) and dn_sz >= MIN_SHARES:
-                            execute_option_a_trade("DOWN", down_id, dn_p, dn_sz)
-                    elif 1 <= seconds_left_cur <= 11:
-                        if up_p in (0.97, 0.98, 0.99) and up_sz >= MIN_SHARES:
-                            execute_option_a_trade("UP", up_id, up_p, up_sz)
-                        elif dn_p in (0.97, 0.98, 0.99) and dn_sz >= MIN_SHARES:
-                            execute_option_a_trade("DOWN", down_id, dn_p, dn_sz)
+                try:
+                    r = requests.get(f"https://gamma-api.polymarket.com/events?slug={slug}", headers=headers, timeout=5).json()
+                    if r:
+                        m = r[0]["markets"][0]
+                        tokens = eval(m["clobTokenIds"])
+                        up_id = tokens[0]
+                        down_id = tokens[1]
+                        
+                        with state_lock:
+                            state["up_id"] = up_id
+                            state["down_id"] = down_id
                             
-            time.sleep(0.5)
+                        log(f"[SYNC] Subscribed Token IDs: UP: ...{up_id[-8:]} | DOWN: ...{down_id[-8:]}")
+                        
+                        r_up = requests.get(f"https://clob.polymarket.com/book?token_id={up_id}", headers=headers, timeout=3).json()
+                        r_dn = requests.get(f"https://clob.polymarket.com/book?token_id={down_id}", headers=headers, timeout=3).json()
+                        
+                        with ws_lock:
+                            order_books[up_id] = {"asks": {float(x["price"]): float(x["size"]) for x in r_up.get("asks", [])}, "bids": {float(x["price"]): float(x["size"]) for x in r_up.get("bids", [])}}
+                            order_books[down_id] = {"asks": {float(x["price"]): float(x["size"]) for x in r_dn.get("asks", [])}, "bids": {float(x["price"]): float(x["size"]) for x in r_dn.get("bids", [])}}
+                            
+                        log("[SYNC] Initial REST order book snapshots primed.")
+                except Exception as e:
+                    log(f"[SYNC ERROR] {e}")
+                    
         except Exception as e:
-            log(f"[LOOP ERROR] {e}")
-            time.sleep(1)
+            log(f"[LOOP EXCEPTION] {e}")
+            
+        time.sleep(1)
 
-# Start background workers
-threading.Thread(target=ws_thread, daemon=True).start()
-threading.Thread(target=bot_loop, daemon=True).start()
+# Start Bot in Daemon Thread
+threading.Thread(target=main_bot_loop, daemon=True).start()
 
-# Flask API Routes
+# Flask Web Dashboard for Railway Monitoring
+app = Flask(__name__)
+
+HTML_TEMPLATE = """
+<!DOCTYPE html>
+<html>
+<head>
+    <title>PolyMirror Bot Status</title>
+    <meta http-equiv="refresh" content="3">
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #0f172a; color: #f8fafc; margin: 0; padding: 20px; }
+        .container { max-width: 900px; margin: auto; background: #1e293b; padding: 25px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+        h1 { color: #38bdf8; margin-top: 0; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; }
+        .card { background: #334155; padding: 15px; border-radius: 8px; text-align: center; }
+        .card .title { font-size: 0.85em; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; }
+        .card .value { font-size: 1.5em; font-weight: bold; margin-top: 5px; color: #38bdf8; }
+        .badge { display: inline-block; padding: 4px 10px; border-radius: 20px; font-weight: bold; font-size: 0.85em; }
+        .badge-green { background: #059669; color: #fff; }
+        .log-box { background: #020617; border: 1px solid #334155; border-radius: 8px; padding: 15px; height: 300px; overflow-y: auto; font-family: monospace; font-size: 0.85em; color: #a5f3fc; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th, td { padding: 10px; text-align: left; border-bottom: 1px solid #334155; }
+        th { background: #0f172a; color: #94a3b8; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🪞 PolyMirror Bot Dashboard</h1>
+        <div class="grid">
+            <div class="card">
+                <div class="title">Status</div>
+                <div class="value"><span class="badge badge-green">{{ state.status }}</span></div>
+            </div>
+            <div class="card">
+                <div class="title">Current Candle</div>
+                <div class="value" style="font-size: 1em;">{{ state.current_slug or 'Syncing...' }}</div>
+            </div>
+            <div class="card">
+                <div class="title">Time Left</div>
+                <div class="value">{{ state.seconds_left }}s</div>
+            </div>
+            <div class="card">
+                <div class="title">UP Ask / DOWN Ask</div>
+                <div class="value">${{ "%.2f"|format(state.up_ask) }} / ${{ "%.2f"|format(state.down_ask) }}</div>
+            </div>
+        </div>
+
+        <h3>Recent Trades</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Time</th>
+                    <th>Trigger (Dying Side)</th>
+                    <th>Bought Outcome</th>
+                    <th>Shares</th>
+                    <th>Price</th>
+                    <th>Cost</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for t in state.trades[-5:]|reverse %}
+                <tr>
+                    <td>{{ t.time }}</td>
+                    <td><span style="color: #ef4444; font-weight: bold;">{{ t.trigger_side }} (<= 0.05)</span></td>
+                    <td><span style="color: #22c55e; font-weight: bold;">{{ t.bought_side }}</span></td>
+                    <td>{{ t.shares }}</td>
+                    <td>${{ "%.2f"|format(t.price) }}</td>
+                    <td>${{ "%.2f"|format(t.cost) }}</td>
+                    <td>{{ t.status }}</td>
+                </tr>
+                {% else %}
+                <tr><td colspan="7" style="text-align: center; color: #64748b;">No trades executed yet. Monitoring live 15s windows...</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <h3>Live Scanner Activity</h3>
+        <div class="log-box">
+            {% for l in state.logs|reverse %}
+            <div>{{ l }}</div>
+            {% endfor %}
+        </div>
+    </div>
+</body>
+</html>
+"""
+
 @app.route("/")
 def index():
-    return render_template("dashboard.html")
+    with state_lock:
+        return render_template_string(HTML_TEMPLATE, state=state)
 
-@app.route("/api/status")
-@app.route("/status")
-def status():
-    live_btc = chainlink_feed.get_price()
-    if live_btc:
-        bot_state["btc_price"] = live_btc
-        if current_ptb:
-            bot_state["ptb"] = current_ptb
-            bot_state["delta"] = live_btc - current_ptb
-            
-    # Always fetch latest live balance
-    bal = get_live_balance()
-    if bal is not None:
-        bot_state["balance"] = bal
-        
-    return jsonify(bot_state)
+@app.route("/api/state")
+def get_state():
+    with state_lock:
+        return jsonify(state)
 
 if __name__ == "__main__":
-    port = int(os.getenv("PORT", 8080))
-    app.run(host="0.0.0.0", port=port, debug=False, threaded=True)
+    port = int(os.environ.get("PORT", 8080))
+    app.run(host="0.0.0.0", port=port)
