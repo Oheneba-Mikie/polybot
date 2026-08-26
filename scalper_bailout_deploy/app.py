@@ -278,16 +278,16 @@ def hybrid_surge_scalper_worker():
                 continue
 
             # Sizing: Sprint 100% (under $10) starting from minimum $2.00 or 50/50 split (over $10)
-            # 💡 Use 95% of available balance to guarantee fee estimates never trigger 400 errors
+            # 💡 Use 90% of available balance to guarantee fee estimates never trigger 400 errors
             if bal < 10.00:
                 bot_state["phase"] = "Phase 1: Sprint (100% Compounding, Min $2.00)"
-                stake_amount = max(2.00, round(bal * 0.95, 2))
+                stake_amount = max(2.00, round(bal * 0.90, 2))
             else:
                 bot_state["phase"] = f"Phase 2: Safe 50/50 Split (Streak {current_streak}/{MAX_WIN_STREAK_CAP})"
                 if current_streak >= MAX_WIN_STREAK_CAP:
                     log("💰 4-WIN PROFIT CAP REACHED! Banking gains and resetting streak to base.")
                     current_streak = 0
-                stake_amount = max(2.00, round((bal / 2.0) * 0.95, 2))
+                stake_amount = max(2.00, round((bal / 2.0) * 0.90, 2))
 
             # ─────────────────────────────────────────────────────────────────
             # 🔥 TIER 1: EARLY SURGE IN-AND-OUT SCALP (T-270s down to T-15s)
