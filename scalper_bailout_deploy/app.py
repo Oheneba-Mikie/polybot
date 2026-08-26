@@ -170,18 +170,41 @@ def get_market_tokens(ts=None):
     except Exception:
         return None
 
+# 🛑 Rate-Limit Protected Order Book Probe with 50ms micro-caching & 429 Backoff
+_book_cache = {} # token_id -> (timestamp, (best_bid, best_ask))
+
 def probe_book_depth(token_id, timeout=1.0):
-    try:
-        r = requests.get(f"{CLOB_HOST}/book", params={"token_id": token_id}, timeout=timeout)
-        r.raise_for_status()
-        data = r.json()
-        bids = [float(b["price"]) for b in data.get("bids", [])]
-        asks = [float(a["price"]) for a in data.get("asks", [])]
-        best_bid = max(bids) if bids else 0.0
-        best_ask = min(asks) if asks else None
-        return best_bid, best_ask
-    except Exception:
-        return 0.0, None
+    now_t = time.time()
+    # Return micro-cached response if called within 50ms (avoids duplicate 429 spam)
+    if token_id in _book_cache:
+        c_time, c_val = _book_cache[token_id]
+        if now_t - c_time < 0.050:
+            return c_val
+
+    for attempt in range(2):
+        try:
+            r = requests.get(f"{CLOB_HOST}/book", params={"token_id": token_id}, timeout=timeout)
+            if r.status_code == 429:
+                time.sleep(0.15 * (attempt + 1)) # Backoff on 429
+                continue
+            r.raise_for_status()
+            data = r.json()
+            bids = [float(b["price"]) for b in data.get("bids", [])]
+            asks = [float(a["price"]) for a in data.get("asks", [])]
+            best_bid = max(bids) if bids else 0.0
+            best_ask = min(asks) if asks else None
+            _book_cache[token_id] = (time.time(), (best_bid, best_ask))
+            return best_bid, best_ask
+        except Exception:
+            if attempt == 0:
+                time.sleep(0.05)
+                continue
+            break
+            
+    # Fallback to cached value if network drops
+    if token_id in _book_cache:
+        return _book_cache[token_id][1]
+    return 0.0, None
 
 def get_live_balance():
     if not client:
