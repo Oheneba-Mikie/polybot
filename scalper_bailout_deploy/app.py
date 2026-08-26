@@ -272,17 +272,21 @@ def hybrid_surge_scalper_worker():
             opposing_id = cached_market["down_id"] if side_name == "UP" else cached_market["up_id"]
 
             bal = get_live_balance()
+            if bal < 2.00:
+                bot_state["phase"] = f"Waiting for Min $2.00 Balance (Current: ${bal:.2f})"
+                time.sleep(0.5)
+                continue
 
-            # Sizing: Sprint 100% (under $10) or 50/50 split (over $10)
+            # Sizing: Sprint 100% (under $10) starting from minimum $2.00 or 50/50 split (over $10)
             if bal < 10.00:
-                bot_state["phase"] = "Phase 1: Sprint (100% Compounding)"
-                stake_amount = max(1.00, round(bal - 0.05, 2))
+                bot_state["phase"] = "Phase 1: Sprint (100% Compounding, Min $2.00)"
+                stake_amount = max(2.00, round(bal - 0.05, 2))
             else:
                 bot_state["phase"] = f"Phase 2: Safe 50/50 Split (Streak {current_streak}/{MAX_WIN_STREAK_CAP})"
                 if current_streak >= MAX_WIN_STREAK_CAP:
                     log("💰 4-WIN PROFIT CAP REACHED! Banking gains and resetting streak to base.")
                     current_streak = 0
-                stake_amount = round((bal / 2.0) - 0.05, 2)
+                stake_amount = max(2.00, round((bal / 2.0) - 0.05, 2))
 
             # ─────────────────────────────────────────────────────────────────
             # 🔥 TIER 1: EARLY SURGE IN-AND-OUT SCALP (T-45s down to T-15s)
