@@ -313,23 +313,43 @@ def hybrid_surge_scalper_worker():
                                 est_shares = round(stake_amount / entry_price, 2)
                                 log(f"✅ BOUGHT {est_shares:.2f} sh of {side_name} @ ${entry_price:.3f}! Scanning for instant sell on bid increase...")
 
-                                # Continuous Sub-Second Monitor: High-Yield Cash-Out & Bailout Shield
-                                position_open = True
-                                log(f"🎯 Continuous Cash-Out Monitor Active: Targeting >= 95¢ or +2¢ profit | 86¢ Bailout Shield Armed!")
-                                
-                                def execute_safe_sell(token_id, shares):
-                                    for attempt in range(3):
+                                # Cont                                def get_live_token_shares(token_id):
+                                    try:
+                                        from py_clob_client_v2.clob_types import BalanceAllowanceParams, AssetType
+                                        resp = client.get_balance_allowance(BalanceAllowanceParams(asset_type=AssetType.CONDITIONAL, token_id=token_id, signature_type=3))
+                                        raw_b = float(resp.get("balance", 0)) / 1_000_000
+                                        return raw_b
+                                    except Exception:
+                                        return 0.0
+
+                                def execute_safe_sell(token_id):
+                                    import re
+                                    for attempt in range(5):
                                         try:
+                                            shares = get_live_token_shares(token_id)
+                                            if shares <= 0.001:
+                                                time.sleep(0.3)
+                                                continue
                                             res = client.create_and_post_market_order(
                                                 MarketOrderArgsV2(token_id=token_id, amount=shares, side="SELL")
                                             )
-                                            return res
+                                            return res, shares
                                         except Exception as e_sell:
-                                            if "balance is not enough" in str(e_sell) or "balance: 0" in str(e_sell):
-                                                time.sleep(0.5) # Wait for CLOB balance indexing
-                                                continue
-                                            raise e_sell
-                                    return None
+                                            err_msg = str(e_sell)
+                                            if "balance is not enough" in err_msg:
+                                                m = re.search(r"balance:\s*(\d+)", err_msg)
+                                                if m:
+                                                    exact_sh = float(m.group(1)) / 1_000_000
+                                                    if exact_sh > 0.001:
+                                                        try:
+                                                            res = client.create_and_post_market_order(
+                                                                MarketOrderArgsV2(token_id=token_id, amount=exact_sh, side="SELL")
+                                                            )
+                                                            return res, exact_sh
+                                                        except Exception:
+                                                            pass
+                                            time.sleep(0.3)
+                                    return None, 0.0
 
                                 while position_open:
                                     cur_bid, _ = probe_book_depth(target_id)
@@ -340,9 +360,9 @@ def hybrid_surge_scalper_worker():
                                     # SAFEGUARD 1: HIGH-YIELD PROFIT CASHOUT (+10% to +15% ROI)
                                     if cur_bid >= 0.950 or cur_bid >= entry_price + 0.02:
                                         log(f"💰 [PROFIT TARGET REACHED: ${cur_bid:.3f} >= ${entry_price:.3f} + profit] FIRING INSTANT CASHOUT...")
-                                        sell_res = execute_safe_sell(target_id, est_shares)
-                                        profit_c = round((cur_bid - entry_price) * est_shares, 2)
-                                        log(f"🎉 CASH-OUT WON! Sold {est_shares:.2f} sh @ ${cur_bid:.3f} (+${profit_c:.2f} Cash Profit). Exited to 100% Cash!")
+                                        sell_res, sold_sh = execute_safe_sell(target_id)
+                                        profit_c = round((cur_bid - entry_price) * (sold_sh or est_shares), 2)
+                                        log(f"🎉 CASH-OUT WON! Sold {sold_sh:.2f} sh @ ${cur_bid:.3f} (+${profit_c:.2f} Cash Profit). Exited to 100% Cash!")
                                         position_open = False
                                         last_traded_candle = w_s
                                         current_streak += 1
@@ -356,9 +376,9 @@ def hybrid_surge_scalper_worker():
                                     # SAFEGUARD 2: THE 2-SECOND BAILOUT SHIELD (STOP-LOSS ON FAKEOUTS)
                                     if cur_bid <= entry_price - 0.02 or (cur_gap <= 10.0 and (time.time() - t_start > 3.0)):
                                         log(f"🛡️ [BAILOUT TRIGGERED: Bid dropped to ${cur_bid:.3f} | Gap: ${cur_gap:.1f}] FIRING EMERGENCY SELL...")
-                                        sell_res = execute_safe_sell(target_id, est_shares)
-                                        loss_c = round((entry_price - cur_bid) * est_shares, 2)
-                                        log(f"🛡️ BAILOUT COMPLETED! Sold {est_shares:.2f} sh @ ${cur_bid:.3f} (-${loss_c:.2f} scratch). Saved 96%+ of Capital!")
+                                        sell_res, sold_sh = execute_safe_sell(target_id)
+                                        loss_c = round((entry_price - cur_bid) * (sold_sh or est_shares), 2)
+                                        log(f"🛡️ BAILOUT COMPLETED! Sold {sold_sh:.2f} sh @ ${cur_bid:.3f} (-${loss_c:.2f} scratch). Saved 96%+ of Capital!")
                                         position_open = False
                                         last_traded_candle = w_s
                                         current_streak = 0
@@ -372,8 +392,8 @@ def hybrid_surge_scalper_worker():
                                     # SAFEGUARD 3: MANDATORY T-10s EXIT
                                     if rem <= 10.0:
                                         log(f"🔒 [T-10s REACHED] Mandatory Cash-Out @ Bid ${cur_bid:.3f}. Exiting to 100% Cash before close!")
-                                        sell_res = execute_safe_sell(target_id, est_shares)
-                                        profit_c = round((cur_bid - entry_price) * est_shares, 2)
+                                        sell_res, sold_sh = execute_safe_sell(target_id)
+                                        profit_c = round((cur_bid - entry_price) * (sold_sh or est_shares), 2)
                                         log(f"✅ T-10s CASH-OUT EXECUTED! Sold @ ${cur_bid:.3f} ({profit_c:+.2f} USDC). 100% Safe in Cash!")
                                         position_open = False
                                         last_traded_candle = w_s
