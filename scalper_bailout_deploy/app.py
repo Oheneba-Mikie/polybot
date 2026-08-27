@@ -211,7 +211,7 @@ def get_live_balance():
         return 2.15
     try:
         from py_clob_client_v2.clob_types import BalanceAllowanceParams, AssetType
-        resp = client.get_balance_allowance(BalanceAllowanceParams(asset_type=AssetType.COLLATERAL))
+        resp = client.get_balance_allowance(BalanceAllowanceParams(asset_type=AssetType.COLLATERAL, signature_type=3))
         raw_b = float(resp.get("balance", 0)) / 1_000_000
         return round(raw_b, 2)
     except Exception:
