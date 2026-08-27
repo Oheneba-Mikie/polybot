@@ -389,26 +389,6 @@ def hybrid_surge_scalper_worker():
                                         bot_state["last_trade"] = f"Bailout Exit: Sold @ ${cur_bid:.3f} (-${loss_c:.2f})"
                                         break
 
-                                    # SAFEGUARD 3: MANDATORY T-10s EXIT
-                                    if rem <= 10.0:
-                                        log(f"🔒 [T-10s REACHED] Mandatory Cash-Out @ Bid ${cur_bid:.3f}. Exiting to 100% Cash before close!")
-                                        sell_res, sold_sh = execute_safe_sell(target_id)
-                                        profit_c = round((cur_bid - entry_price) * (sold_sh or est_shares), 2)
-                                        log(f"✅ T-10s CASH-OUT EXECUTED! Sold @ ${cur_bid:.3f} ({profit_c:+.2f} USDC). 100% Safe in Cash!")
-                                        position_open = False
-                                        last_traded_candle = w_s
-                                        if profit_c >= 0:
-                                            current_streak += 1
-                                            bot_state["wins"] += 1
-                                        else:
-                                            current_streak = 0
-                                            bot_state["losses"] += 1
-                                        bot_state["total_trades"] += 1
-                                        bot_state["streak"] = current_streak
-                                        bot_state["total_profit_usdc"] = round(bot_state.get("total_profit_usdc", 0.0) + profit_c, 2)
-                                        bot_state["last_trade"] = f"T-10s Cash-Out: Sold @ ${cur_bid:.3f} ({profit_c:+.2f} USDC)"
-                                        break
-
                                     time.sleep(0.02) # 20ms poll rate
 
                             except Exception as ex:
