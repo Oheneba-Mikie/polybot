@@ -357,9 +357,9 @@ def hybrid_surge_scalper_worker():
                                     live_now_btc = chainlink_feed.get_price() or live_btc
                                     cur_gap = abs(live_now_btc - candle_strike)
 
-                                    # SAFEGUARD 1: HIGH-YIELD PROFIT CASHOUT (+10% to +15% ROI)
-                                    if cur_bid >= 0.950 or cur_bid >= entry_price + 0.02:
-                                        log(f"💰 [PROFIT TARGET REACHED: ${cur_bid:.3f} >= ${entry_price:.3f} + profit] FIRING INSTANT CASHOUT...")
+                                    # SAFEGUARD 1: INSTANT GREEN CASHOUT (DUMP IMMEDIATELY INTO BUYERS ON FIRST GREEN TICK)
+                                    if cur_bid > entry_price or cur_bid >= 0.950:
+                                        log(f"💰 [BUYERS ACTIVE: Bid ${cur_bid:.3f} > Entry ${entry_price:.3f}] FIRING INSTANT MARKET CASHOUT...")
                                         sell_res, sold_sh = execute_safe_sell(target_id)
                                         profit_c = round((cur_bid - entry_price) * (sold_sh or est_shares), 2)
                                         log(f"🎉 CASH-OUT WON! Sold {sold_sh:.2f} sh @ ${cur_bid:.3f} (+${profit_c:.2f} Cash Profit). Exited to 100% Cash!")
