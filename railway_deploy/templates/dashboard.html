@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Polybot Live Dashboard</title>
+    <title>Polybot $1 Trend Scalper & Rollover</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Space+Grotesk:wght@400;700&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -15,6 +15,7 @@
             --accent-green: #00ffaa;
             --accent-red: #ff4a5a;
             --accent-blue: #3b82f6;
+            --accent-purple: #8b5cf6;
             --glow-green: rgba(0, 255, 170, 0.15);
             --glow-blue: rgba(59, 130, 246, 0.25);
         }
@@ -32,7 +33,7 @@
                 radial-gradient(at 100% 100%, rgba(0, 255, 170, 0.05) 0px, transparent 50%);
             font-family: 'Outfit', sans-serif;
             color: var(--text-primary);
-            min-height: 100/vh;
+            min-height: 100vh;
             padding: 2rem;
             display: flex;
             flex-direction: column;
@@ -41,15 +42,15 @@
 
         .container {
             width: 100%;
-            max-width: 1200px;
+            max-width: 1250px;
         }
 
-        /* Header styling */
+        /* Header */
         header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 2.5rem;
+            margin-bottom: 2rem;
             padding-bottom: 1.5rem;
             border-bottom: 1px solid var(--border-color);
         }
@@ -92,16 +93,41 @@
             animation: pulse 1.5s infinite;
         }
 
+        .status-badge.halted {
+            background: rgba(255, 74, 90, 0.08);
+            border-color: var(--accent-red);
+            color: var(--accent-red);
+            box-shadow: 0 0 15px rgba(255, 74, 90, 0.2);
+        }
+
+        .status-badge.halted .dot {
+            background-color: var(--accent-red);
+            animation: none;
+        }
+
         @keyframes pulse {
             0% { transform: scale(0.9); opacity: 0.6; }
             50% { transform: scale(1.2); opacity: 1; }
             100% { transform: scale(0.9); opacity: 0.6; }
         }
 
+        /* Alert Banner */
+        #halt-banner {
+            display: none;
+            background: rgba(255, 74, 90, 0.15);
+            border: 1px solid var(--accent-red);
+            color: #ff99a4;
+            padding: 1rem 1.5rem;
+            border-radius: 12px;
+            margin-bottom: 2rem;
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
         /* Stats Grid */
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
             gap: 1.5rem;
             margin-bottom: 2.5rem;
         }
@@ -119,7 +145,7 @@
         }
 
         .card:hover {
-            transform: translateY(-5px);
+            transform: translateY(-4px);
             border-color: rgba(255, 255, 255, 0.15);
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
         }
@@ -131,16 +157,15 @@
             left: 0;
             width: 100%;
             height: 4px;
-            background: transparent;
         }
 
-        .card.wallet::before { background: var(--accent-blue); }
-        .card.streak1::before { background: var(--accent-green); }
-        .card.streak2::before { background: var(--accent-green); }
+        .card.bankroll::before { background: var(--accent-green); }
         .card.market::before { background: var(--accent-blue); }
+        .card.velocity::before { background: var(--accent-purple); }
+        .card.scalp::before { background: #eab308; }
 
         .card-label {
-            font-size: 0.85rem;
+            font-size: 0.82rem;
             text-transform: uppercase;
             letter-spacing: 1px;
             color: var(--text-secondary);
@@ -151,10 +176,10 @@
         }
 
         .card-value {
-            font-size: 2.2rem;
+            font-size: 2rem;
             font-weight: 800;
             font-family: 'Space Grotesk', sans-serif;
-            margin-bottom: 0.5rem;
+            margin-bottom: 0.4rem;
         }
 
         .card-subtext {
@@ -165,10 +190,10 @@
             gap: 0.25rem;
         }
 
-        /* Layout structure split */
+        /* Layout Main */
         .layout-main {
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: 1.1fr 0.9fr;
             gap: 2rem;
         }
 
@@ -188,7 +213,7 @@
             justify-content: space-between;
         }
 
-        /* Table styling */
+        /* Table */
         .table-container {
             background: var(--card-bg);
             backdrop-filter: blur(16px);
@@ -207,7 +232,7 @@
         th {
             background: rgba(255, 255, 255, 0.02);
             padding: 1rem 1.25rem;
-            font-size: 0.85rem;
+            font-size: 0.8rem;
             text-transform: uppercase;
             letter-spacing: 0.5px;
             color: var(--text-secondary);
@@ -217,7 +242,7 @@
 
         td {
             padding: 1rem 1.25rem;
-            font-size: 0.9rem;
+            font-size: 0.88rem;
             border-bottom: 1px solid var(--border-color);
         }
 
@@ -245,117 +270,131 @@
             color: var(--accent-red);
         }
 
-        /* Logs Console */
+        .badge.even {
+            background: rgba(156, 163, 175, 0.1);
+            border: 1px solid var(--text-secondary);
+            color: var(--text-secondary);
+        }
+
+        /* Console */
         .console-container {
             background: #04060b;
             border: 1px solid var(--border-color);
             border-radius: 20px;
             padding: 1.25rem;
-            font-family: 'Space Grotesk', monospace;
-            font-size: 0.85rem;
-            line-height: 1.6;
-            height: 380px;
+            font-family: 'SF Mono', 'Courier New', Courier, monospace;
+            font-size: 0.8rem;
+            height: 480px;
             overflow-y: auto;
-            color: #a5b4fc;
+            color: #d1d5db;
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
         }
 
         .console-line {
-            margin-bottom: 0.5rem;
-            word-break: break-all;
+            line-height: 1.5;
+            word-break: break-word;
         }
 
-        .console-line.system { color: #818cf8; }
         .console-line.success { color: var(--accent-green); }
-        .console-line.warning { color: #fbbf24; }
         .console-line.error { color: var(--accent-red); }
-
-        /* Progress bars for streaks */
-        .progress-track {
-            width: 100%;
-            height: 6px;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 5px;
-            margin-top: 0.5rem;
-            overflow: hidden;
-        }
-
-        .progress-bar {
-            height: 100%;
-            background: linear-gradient(90deg, var(--accent-green), #3b82f6);
-            border-radius: 5px;
-            width: 0%;
-            transition: width 0.5s ease;
-        }
+        .console-line.warning { color: #f59e0b; }
+        .console-line.system { color: #60a5fa; }
     </style>
 </head>
 <body>
     <div class="container">
+        <!-- Header -->
         <header>
             <div class="brand">
-                <h1>POLYBOT LIVE</h1>
-                <p>Advanced Staggered Polymarket Compounding Bot</p>
+                <h1>⚡ Polybot $1 Trend Scalper</h1>
+                <p>$1 Starting Trade &middot; Rollover Winnings &middot; Never Enter Again on Loss</p>
             </div>
-            <div class="status-badge">
+            <div class="status-badge" id="bot-status-badge">
                 <div class="dot"></div>
-                <span>ACTIVE MONITOR</span>
+                <span id="bot-status-text">SCALPER ACTIVE</span>
             </div>
         </header>
 
+        <!-- Halt Banner -->
+        <div id="halt-banner">
+            🛑 BOT PERMANENTLY HALTED: The initial $1 bankroll was lost. As instructed, trading has stopped forever.
+        </div>
+
         <!-- Stats Grid -->
         <div class="stats-grid">
-            <div class="card wallet">
-                <div class="card-label">USDC Balance</div>
-                <div class="card-value" id="wallet-balance">$0.00</div>
-                <div class="card-subtext" id="wallet-phase">PHASE -</div>
-            </div>
-
-            <div class="card streak1">
+            <!-- Card 1: Bankroll / Rollover Stake -->
+            <div class="card bankroll">
                 <div class="card-label">
-                    <span>Streak 1 (All-Rules)</span>
-                    <span id="s1-badge" class="badge">0/4 Wins</span>
+                    <span>Trade Bankroll</span>
+                    <span id="wins-badge" style="color: var(--accent-green); font-weight: 700;">0 WINS</span>
                 </div>
-                <div class="card-value" id="s1-stake">$0.00</div>
-                <div class="progress-track">
-                    <div id="s1-progress" class="progress-bar"></div>
-                </div>
-            </div>
-
-            <div class="card streak2">
-                <div class="card-label">
-                    <span>Streak 2 (Close-Only)</span>
-                    <span id="s2-badge" class="badge">0/4 Wins</span>
-                </div>
-                <div class="card-value" id="s2-stake">$0.00</div>
-                <div class="progress-track">
-                    <div id="s2-progress" class="progress-bar"></div>
+                <div class="card-value" id="current-bankroll">$1.00</div>
+                <div class="card-subtext">
+                    <span>Wallet Balance:</span>
+                    <strong id="wallet-balance" style="color: #fff; margin-left: 4px;">$-</strong>
                 </div>
             </div>
 
+            <!-- Card 2: Market Price & PTB -->
             <div class="card market">
-                <div class="card-label">BTC Market Status</div>
+                <div class="card-label">
+                    <span>BTC Price (Chainlink)</span>
+                    <span style="color: var(--accent-blue);">LIVE WS</span>
+                </div>
                 <div class="card-value" id="btc-price">$-</div>
-                <div class="card-subtext" id="btc-ptb">PTB: $-</div>
+                <div class="card-subtext">
+                    <span id="btc-ptb">PTB: $-</span>
+                </div>
+            </div>
+
+            <!-- Card 3: Real-Time Velocity -->
+            <div class="card velocity">
+                <div class="card-label">
+                    <span>Sudden Velocity</span>
+                    <span style="color: var(--accent-purple);">MOMENTUM</span>
+                </div>
+                <div class="card-value" id="btc-velocity">+$0.0</div>
+                <div class="card-subtext">
+                    <span id="btc-velocity-sub">3s: $0.0 | 5s: $0.0</span>
+                </div>
+            </div>
+
+            <!-- Card 4: Active Scalp Status -->
+            <div class="card scalp">
+                <div class="card-label">
+                    <span>Active Scalp</span>
+                    <span id="scalp-state-badge" style="color: #eab308;">IDLE</span>
+                </div>
+                <div class="card-value" id="scalp-side" style="font-size: 1.7rem;">READY</div>
+                <div class="card-subtext">
+                    <span id="scalp-target">Target: +1¢ Quick Exit</span>
+                </div>
             </div>
         </div>
 
+        <!-- Main Content -->
         <div class="layout-main">
-            <!-- Left Column: Trade History -->
+            <!-- Left Column: Scalp Trades -->
             <div>
-                <h2 class="section-title">Trade History 📈</h2>
+                <h2 class="section-title">Scalp Trade History 📊</h2>
                 <div class="table-container">
                     <table>
                         <thead>
                             <tr>
                                 <th>Time</th>
-                                <th>Streak</th>
                                 <th>Side</th>
                                 <th>Stake</th>
-                                <th>Result</th>
+                                <th>Entry</th>
+                                <th>Exit</th>
+                                <th>P&L</th>
+                                <th>Outcome</th>
                             </tr>
                         </thead>
                         <tbody id="trades-body">
                             <tr>
-                                <td colspan="5" style="text-align: center; color: var(--text-secondary);">Waiting for trades...</td>
+                                <td colspan="7" style="text-align: center; color: var(--text-secondary);">Waiting for scalp trades...</td>
                             </tr>
                         </tbody>
                     </table>
@@ -366,7 +405,7 @@
             <div>
                 <h2 class="section-title">Live Engine Log 🖥️</h2>
                 <div class="console-container" id="console-logs">
-                    <div class="console-line system">[System] Engine dashboard initialized. Listening for updates...</div>
+                    <div class="console-line system">[System] $1 In-and-Out Trend Scalper initialized. Streaming market ticks...</div>
                 </div>
             </div>
         </div>
@@ -379,19 +418,18 @@
                 if (!response.ok) return;
                 const data = await response.json();
 
-                // Update Wallet Info
+                // Check Halted Status
+                if (data.is_halted) {
+                    document.getElementById('halt-banner').style.display = 'block';
+                    document.getElementById('halt-banner').innerText = `🛑 BOT PERMANENTLY HALTED: ${data.halt_reason || "Lost the $1 bankroll."} As instructed, no more trades will ever be placed.`;
+                    document.getElementById('bot-status-badge').className = 'status-badge halted';
+                    document.getElementById('bot-status-text').innerText = 'HALTED ON LOSS';
+                }
+
+                // Update Sizing & Bankroll
+                document.getElementById('current-bankroll').innerText = `$${(data.bankroll || 1.00).toFixed(2)}`;
+                document.getElementById('wins-badge').innerText = `${data.consecutive_wins || 0} ROLLOVER WINS`;
                 document.getElementById('wallet-balance').innerText = `$${data.balance.toFixed(2)}`;
-                document.getElementById('wallet-phase').innerText = `PHASE ${data.phase} MODE`;
-
-                // Update Streak 1
-                document.getElementById('s1-stake').innerText = `$${data.streak_1.stake.toFixed(2)}`;
-                document.getElementById('s1-badge').innerText = `${data.streak_1.wins}/4 Wins`;
-                document.getElementById('s1-progress').style.width = `${(data.streak_1.wins / 4) * 100}%`;
-
-                // Update Streak 2
-                document.getElementById('s2-stake').innerText = `$${data.streak_2.stake.toFixed(2)}`;
-                document.getElementById('s2-badge').innerText = `${data.streak_2.wins}/4 Wins`;
-                document.getElementById('s2-progress').style.width = `${(data.streak_2.wins / 4) * 100}%`;
 
                 // Update Market Info
                 if (data.market.price) {
@@ -400,9 +438,43 @@
                     document.getElementById('btc-price').innerText = '$-';
                 }
                 if (data.market.ptb) {
-                    document.getElementById('btc-ptb').innerText = `PTB: $${data.market.ptb.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+                    const delta = data.market.price ? (data.market.price - data.market.ptb) : 0;
+                    const sign = delta >= 0 ? '+' : '';
+                    document.getElementById('btc-ptb').innerText = `PTB: $${data.market.ptb.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} (${sign}$${delta.toFixed(1)})`;
                 } else {
                     document.getElementById('btc-ptb').innerText = 'PTB: $-';
+                }
+
+                // Update Velocity
+                const v3 = data.market.velocity_3s || 0;
+                const v5 = data.market.velocity_5s || 0;
+                const sign3 = v3 >= 0 ? '+' : '';
+                const sign5 = v5 >= 0 ? '+' : '';
+                document.getElementById('btc-velocity').innerText = `${sign3}$${v3.toFixed(1)}/3s`;
+                document.getElementById('btc-velocity').style.color = v3 > 15 ? 'var(--accent-green)' : (v3 < -15 ? 'var(--accent-red)' : 'var(--text-primary)');
+                document.getElementById('btc-velocity-sub').innerText = `3s: ${sign3}$${v3.toFixed(1)} | 5s: ${sign5}$${v5.toFixed(1)}`;
+
+                // Update Active Scalp
+                if (data.is_halted) {
+                    document.getElementById('scalp-state-badge').innerText = 'PERM HALTED';
+                    document.getElementById('scalp-state-badge').style.color = 'var(--accent-red)';
+                    document.getElementById('scalp-side').innerText = 'HALTED';
+                    document.getElementById('scalp-target').innerText = 'No more trades permitted.';
+                } else if (data.scalp && data.scalp.active) {
+                    document.getElementById('scalp-state-badge').innerText = 'IN POSITION';
+                    document.getElementById('scalp-state-badge').style.color = 'var(--accent-green)';
+                    document.getElementById('scalp-side').innerText = `${data.scalp.side} @ $${data.scalp.entry_price.toFixed(4)}`;
+                    document.getElementById('scalp-target').innerText = `Target Sell: >= $${data.scalp.target_sell_price.toFixed(4)}`;
+                } else if (data.window_trade_done) {
+                    document.getElementById('scalp-state-badge').innerText = 'WINDOW DONE';
+                    document.getElementById('scalp-state-badge').style.color = 'var(--accent-blue)';
+                    document.getElementById('scalp-side').innerText = 'SCALP EXITED';
+                    document.getElementById('scalp-target').innerText = 'Resting until next window...';
+                } else {
+                    document.getElementById('scalp-state-badge').innerText = 'SCANNING';
+                    document.getElementById('scalp-state-badge').style.color = '#eab308';
+                    document.getElementById('scalp-side').innerText = 'WAITING TREND';
+                    document.getElementById('scalp-target').innerText = 'Target: +1¢ Quick Exit';
                 }
 
                 // Render Trades
@@ -411,20 +483,24 @@
                     tradesBody.innerHTML = '';
                     data.trades.forEach(t => {
                         const tr = document.createElement('tr');
-                        const outcomeClass = t.outcome.toLowerCase().includes('win') ? 'win' : (t.outcome.toLowerCase().includes('loss') ? 'loss' : '');
-                        const outcomeBadge = outcomeClass ? `<span class="badge ${outcomeClass}">${t.outcome}</span>` : t.outcome;
+                        const outcomeClass = t.outcome.toLowerCase() === 'win' ? 'win' : (t.outcome.toLowerCase() === 'loss' ? 'loss' : 'even');
+                        const outcomeBadge = `<span class="badge ${outcomeClass}">${t.outcome}</span>`;
+                        const pnlColor = t.pnl > 0 ? 'var(--accent-green)' : (t.pnl < 0 ? 'var(--accent-red)' : 'var(--text-secondary)');
+                        const pnlSign = t.pnl > 0 ? '+' : '';
                         
                         tr.innerHTML = `
                             <td>${t.time}</td>
-                            <td>${t.name}</td>
-                            <td>${t.side}</td>
+                            <td><strong>${t.side}</strong></td>
                             <td>$${t.stake.toFixed(2)}</td>
+                            <td>$${t.entry_price.toFixed(4)}</td>
+                            <td>$${t.exit_price.toFixed(4)}</td>
+                            <td style="color: ${pnlColor}; font-weight: 600;">${pnlSign}$${t.pnl.toFixed(4)}</td>
                             <td>${outcomeBadge}</td>
                         `;
                         tradesBody.appendChild(tr);
                     });
                 } else {
-                    tradesBody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-secondary);">No trades placed yet.</td></tr>';
+                    tradesBody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-secondary);">No scalp trades placed yet.</td></tr>';
                 }
 
                 // Render Console Logs
@@ -434,9 +510,9 @@
                     data.logs.forEach(log => {
                         const div = document.createElement('div');
                         div.className = 'console-line';
-                        if (log.includes('WIN')) div.className += ' success';
-                        else if (log.includes('LOSS')) div.className += ' error';
-                        else if (log.includes('PLACING') || log.includes('LIVE')) div.className += ' warning';
+                        if (log.includes('COMPLETE') || log.includes('TAKE_PROFIT') || log.includes('WIN') || log.includes('ROLLOVER')) div.className += ' success';
+                        else if (log.includes('LOSS') || log.includes('HALT') || log.includes('FAILED') || log.includes('ERROR')) div.className += ' error';
+                        else if (log.includes('TREND DETECTED') || log.includes('Placing') || log.includes('LIVE')) div.className += ' warning';
                         else div.className += ' system';
                         
                         div.innerText = log;
@@ -450,8 +526,7 @@
             }
         }
 
-        // Fetch updates every 5 seconds
-        setInterval(fetchUpdates, 5000);
+        setInterval(fetchUpdates, 2000);
         fetchUpdates();
     </script>
 </body>
