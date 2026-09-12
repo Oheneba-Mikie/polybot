@@ -1,0 +1,31 @@
+745017b|2026-09-07 23:30:55 +0000|Deploy  In-and-Out Sudden Trend Scalper with Rollover and Halt-on-Loss
+3cf288e|2026-08-27 14:01:06 +0000|Remove T-10s exit block; preserve Tier 2 snipe
+ea110f7|2026-08-27 13:56:59 +0000|Cash out instantly on first green tick when buyers appear
+c49c154|2026-08-27 13:37:03 +0000|Sell 100% exact live wallet shares without theoretical math calculation
+19dd7f4|2026-08-27 09:09:57 +0000|Configure signature_type 3 for accurate proxy balance querying
+ae3d7f8|2026-08-26 18:22:11 +0000|Set 90% sizing buffer for fee protection
+57cd748|2026-08-26 18:15:27 +0000|Add 5% fee buffer on stake and robust sell retry loop
+500f504|2026-08-26 18:11:08 +0000|Set minimum stake amount to 2 dollars
+1e2f609|2026-08-26 18:02:56 +0000|Fix 4: Rate-Limit Protection with micro-caching and 429 backoff
+4d0a9da|2026-08-26 17:54:08 +0000|Implement Continuous High-Yield Cashout and 86c Bailout Shield
+ea21800|2026-08-23 12:52:59 +0000|speed bot
+ecace5c|2026-08-23 03:19:24 +0000|good2
+e014ac2|2026-08-23 03:18:37 +0000|good1
+fd47aaf|2026-08-23 03:18:26 +0000|good
+125b05f|2026-08-20 00:45:30 +0000|Add 23s-15s strong momentum trigger and 11s late execution window
+7bda5c8|2026-08-19 23:56:13 +0000|Set final seconds window to strictly 11s (1 <= seconds_left <= 11)
+2fd6d0b|2026-08-19 23:53:18 +0000|Simplify triggers to strictly price == 0.98 in final 15s window with no extra delta conditions
+098c83e|2026-08-19 23:50:00 +0000|Restore strict 0.98 target price and require mandatory live oracle delta verification
+2616f59|2026-08-19 23:07:55 +0000|Ensure all trigger paths enforce final seconds lock-in and delta confirmation
+e02b09d|2026-08-19 23:03:48 +0000|Update Option A and Option B with 11s final seconds lock-in window and Oracle delta validation
+0437b2c|2026-08-19 16:39:48 +0000|fireworks
+e2d0327|2026-08-14 19:09:44 +0000|well it is what it is
+e97c1a0|2026-07-20 22:43:28 +0000|working an dprofiting with the 5mins hybrid
+a9fd3e4|2026-07-20 03:01:02 +0000|more
+45ed4d5|2026-07-19 23:15:06 +0000|rollover winnings works and smarrt scalling is for removing while wining
+22e5d85|2026-07-19 16:24:48 +0000|rolover wininings
+767a4fa|2026-07-19 15:53:25 +0000|this is what works
+94ddecc|2026-07-19 14:44:22 +0000|with 50%
+681081a|2026-07-19 06:14:10 +0000|live stuffs
+342ec77|2026-07-18 15:02:31 +0000|works with risk
+35f0ad6|2026-07-15 23:26:38 +0000|Initial commit — polybot + smartbot for Polymarket BTC 5-min Up/Down

@@ -1,0 +1,30 @@
+==============================================================================================================
+📊 SUMMARY REPORT: 24-HOUR AUDIT OF 288 5-MINUTE BTC MARKETS
+==============================================================================================================
+
+1. 🎯 FINAL RESOLUTION (1.0 vs Non-1.0):
+   • Total Processed 5m Markets: 288
+   • Markets Resolved to Exact 1.0 / 0.0: 286 (99.3%)
+   • Markets that DID NOT reach 1.0 resolution (or ongoing / ties): 2
+
+   Detailed List of Non-1.0 / Ongoing Resolutions:
+     - btc-updown-5m-1789221900 (14:05 UTC): UP=0.995 | DOWN=0.005 | Trades=500
+     - btc-updown-5m-1789222200 (14:10 UTC): UP=0.195 | DOWN=0.805 | Trades=12
+
+2. ⚡ IN-PLAY CONTESTED MARKETS (Where traded price stayed < $0.95 until the close):
+   • Total Contested Markets: 2
+     - btc-updown-5m-1789143900 (16:25 UTC): Max UP = $0.51 | Max DOWN = $0.50 | Trades = 43
+     - btc-updown-5m-1789222200 (14:10 UTC): Max UP = $0.50 | Max DOWN = $0.56 | Trades = 12
+
+3. ⏱️ HOW LONG IT TOOK FOR BOTH ENDS TO DRY UP (When the first leg stopped trading):
+   • Both sides (UP & DOWN) actively traded until an average of: T-18.9s before candle close
+   • Median dry-up time: T-8.0s before candle close
+   • Range: T--102.0s to T-1277.0s
+
+   📈 Dry-Up Timing Breakdown (When the first leg stopped trading):
+     • Both ends active until final 30s (T-30s to T-0s):  189 markets (75.0%)
+     • Both ends active until T-60s to T-30s:              50 markets (19.8%)
+     • Both ends active until T-120s to T-60s:             9 markets (3.6%)
+     • One end dried up early (>120s before close):        4 markets (1.6%)
+
+==============================================================================================================

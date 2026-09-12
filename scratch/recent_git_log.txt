@@ -1,0 +1,25 @@
+745017b Deploy  In-and-Out Sudden Trend Scalper with Rollover and Halt-on-Loss
+3cf288e Remove T-10s exit block; preserve Tier 2 snipe
+ea110f7 Cash out instantly on first green tick when buyers appear
+c49c154 Sell 100% exact live wallet shares without theoretical math calculation
+19dd7f4 Configure signature_type 3 for accurate proxy balance querying
+ae3d7f8 Set 90% sizing buffer for fee protection
+57cd748 Add 5% fee buffer on stake and robust sell retry loop
+500f504 Set minimum stake amount to 2 dollars
+1e2f609 Fix 4: Rate-Limit Protection with micro-caching and 429 backoff
+4d0a9da Implement Continuous High-Yield Cashout and 86c Bailout Shield
+ea21800 speed bot
+ecace5c good2
+e014ac2 good1
+fd47aaf good
+125b05f Add 23s-15s strong momentum trigger and 11s late execution window
+7bda5c8 Set final seconds window to strictly 11s (1 <= seconds_left <= 11)
+2fd6d0b Simplify triggers to strictly price == 0.98 in final 15s window with no extra delta conditions
+098c83e Restore strict 0.98 target price and require mandatory live oracle delta verification
+2616f59 Ensure all trigger paths enforce final seconds lock-in and delta confirmation
+e02b09d Update Option A and Option B with 11s final seconds lock-in window and Oracle delta validation
+0437b2c fireworks
+e2d0327 well it is what it is
+e97c1a0 working an dprofiting with the 5mins hybrid
+a9fd3e4 more
+45ed4d5 rollover winnings works and smarrt scalling is for removing while wining

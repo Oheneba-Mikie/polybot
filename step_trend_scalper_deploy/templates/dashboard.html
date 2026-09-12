@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Polybot Buyer Sweep Scalper — Live Engine</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Space+Grotesk:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #070a12;
+            --card-bg: rgba(15, 23, 42, 0.75);
+            --border-color: rgba(255, 255, 255, 0.08);
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --accent-green: #10b981;
+            --accent-red: #ef4444;
+            --accent-cyan: #06b6d4;
+            --accent-purple: #a855f7;
+            --glow-cyan: rgba(6, 182, 212, 0.2);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(6, 182, 212, 0.1) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(168, 85, 247, 0.08) 0px, transparent 50%);
+            font-family: 'Outfit', sans-serif;
+            color: var(--text-primary);
+            min-height: 100vh;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1250px;
+        }
+
+        /* Header */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .brand h1 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 2.2rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #06b6d4, #10b981);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.5px;
+        }
+
+        .brand p {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin-top: 0.25rem;
+        }
+
+        .status-badge {
+            background: rgba(6, 182, 212, 0.08);
+            border: 1px solid var(--accent-cyan);
+            color: var(--accent-cyan);
+            padding: 0.5rem 1rem;
+            border-radius: 50px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            box-shadow: 0 0 15px var(--glow-cyan);
+        }
+
+        .status-badge .dot {
+            width: 8px;
+            height: 8px;
+            background-color: var(--accent-cyan);
+            border-radius: 50%;
+            animation: pulse 1.5s infinite;
+        }
+
+        .status-badge.halted {
+            background: rgba(239, 68, 68, 0.08);
+            border-color: var(--accent-red);
+            color: var(--accent-red);
+            box-shadow: 0 0 15px rgba(239, 68, 68, 0.2);
+        }
+
+        .status-badge.halted .dot {
+            background-color: var(--accent-red);
+            animation: none;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(0.9); opacity: 0.6; }
+            50% { transform: scale(1.2); opacity: 1; }
+            100% { transform: scale(0.9); opacity: 0.6; }
+        }
+
+        /* Alert Banner */
+        #halt-banner {
+            display: none;
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid var(--accent-red);
+            color: #fca5a5;
+            padding: 1rem 1.5rem;
+            border-radius: 12px;
+            margin-bottom: 2rem;
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2.5rem;
+        }
+
+        .card {
+            background: var(--card-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card:hover {
+            transform: translateY(-4px);
+            border-color: rgba(255, 255, 255, 0.15);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+        }
+
+        .card.bankroll::before { background: var(--accent-green); }
+        .card.market::before { background: var(--accent-cyan); }
+        .card.sweep::before { background: var(--accent-purple); }
+        .card.scalp::before { background: #eab308; }
+
+        .card-label {
+            font-size: 0.82rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .card-value {
+            font-size: 2rem;
+            font-weight: 800;
+            font-family: 'Space Grotesk', sans-serif;
+            margin-bottom: 0.4rem;
+        }
+
+        .card-subtext {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        /* Layout Main */
+        .layout-main {
+            display: grid;
+            grid-template-columns: 1.1fr 0.9fr;
+            gap: 2rem;
+        }
+
+        @media (max-width: 900px) {
+            .layout-main {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .section-title {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin-bottom: 1.25rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        /* Table */
+        .table-container {
+            background: var(--card-bg);
+            backdrop-filter: blur(16px);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            overflow: hidden;
+            width: 100%;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+        }
+
+        th {
+            background: rgba(255, 255, 255, 0.02);
+            padding: 1rem 1.25rem;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-secondary);
+            font-weight: 600;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        td {
+            padding: 1rem 1.25rem;
+            font-size: 0.88rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        .badge {
+            padding: 0.25rem 0.6rem;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .badge.win {
+            background: rgba(16, 185, 129, 0.08);
+            border: 1px solid var(--accent-green);
+            color: var(--accent-green);
+        }
+
+        .badge.loss {
+            background: rgba(239, 68, 68, 0.08);
+            border: 1px solid var(--accent-red);
+            color: var(--accent-red);
+        }
+
+        .badge.even {
+            background: rgba(148, 163, 184, 0.1);
+            border: 1px solid var(--text-secondary);
+            color: var(--text-secondary);
+        }
+
+        /* Console */
+        .console-container {
+            background: #030712;
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 1.25rem;
+            font-family: 'SF Mono', 'Courier New', Courier, monospace;
+            font-size: 0.8rem;
+            height: 480px;
+            overflow-y: auto;
+            color: #cbd5e1;
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        }
+
+        .console-line {
+            line-height: 1.5;
+            word-break: break-word;
+        }
+
+        .console-line.success { color: var(--accent-green); }
+        .console-line.error { color: var(--accent-red); }
+        .console-line.warning { color: #f59e0b; }
+        .console-line.system { color: #38bdf8; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header>
+            <div class="brand">
+                <h1>⚡ Polybot Buyer Sweep Scalper</h1>
+                <p>Order Flow Sweep Scalper &middot; $1.00 Starting Trade &middot; Rollover Winnings</p>
+            </div>
+            <div class="status-badge" id="bot-status-badge">
+                <div class="dot"></div>
+                <span id="bot-status-text">SWEEP ENGINE ACTIVE</span>
+            </div>
+        </header>
+
+        <!-- Halt Banner -->
+        <div id="halt-banner">
+            🛑 BOT PERMANENTLY HALTED: The initial $1 bankroll was lost. As instructed, trading has stopped forever.
+        </div>
+
+        <!-- Stats Grid -->
+        <div class="stats-grid">
+            <!-- Card 1: Bankroll / Rollover Stake -->
+            <div class="card bankroll">
+                <div class="card-label">
+                    <span>Trade Bankroll</span>
+                    <span id="wins-badge" style="color: var(--accent-green); font-weight: 700;">0 WINS</span>
+                </div>
+                <div class="card-value" id="current-bankroll">$1.00</div>
+                <div class="card-subtext">
+                    <span>Wallet Balance:</span>
+                    <strong id="wallet-balance" style="color: #fff; margin-left: 4px;">$-</strong>
+                </div>
+            </div>
+
+            <!-- Card 2: Market Tokens -->
+            <div class="card market">
+                <div class="card-label">
+                    <span>Live Order Book</span>
+                    <span style="color: var(--accent-cyan);">CLOB LIVE</span>
+                </div>
+                <div class="card-value" id="book-spread" style="font-size: 1.5rem;">UP: - | DN: -</div>
+                <div class="card-subtext">
+                    <span id="btc-info">BTC: $-</span>
+                </div>
+            </div>
+
+            <!-- Card 3: Buyer Flow -->
+            <div class="card sweep">
+                <div class="card-label">
+                    <span>Order Flow Surge</span>
+                    <span style="color: var(--accent-purple);">SWEEP SCAN</span>
+                </div>
+                <div class="card-value" id="sweep-status" style="font-size: 1.5rem;">MONITORING</div>
+                <div class="card-subtext">
+                    <span id="sweep-info">Listening for buyer surges...</span>
+                </div>
+            </div>
+
+            <!-- Card 4: Active Scalp Status -->
+            <div class="card scalp">
+                <div class="card-label">
+                    <span>Active Scalp</span>
+                    <span id="scalp-state-badge" style="color: #eab308;">IDLE</span>
+                </div>
+                <div class="card-value" id="scalp-side" style="font-size: 1.5rem;">READY</div>
+                <div class="card-subtext">
+                    <span id="scalp-target">Target: +1¢ Quick Exit</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="layout-main">
+            <!-- Left Column: Scalp Trades -->
+            <div>
+                <h2 class="section-title">Scalp Trade History 📊</h2>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Time</th>
+                                <th>Side</th>
+                                <th>Stake</th>
+                                <th>Entry</th>
+                                <th>Exit</th>
+                                <th>P&L</th>
+                                <th>Outcome</th>
+                            </tr>
+                        </thead>
+                        <tbody id="trades-body">
+                            <tr>
+                                <td colspan="7" style="text-align: center; color: var(--text-secondary);">Waiting for sweep trades...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Right Column: Live Console Logs -->
+            <div>
+                <h2 class="section-title">Live Engine Log 🖥️</h2>
+                <div class="console-container" id="console-logs">
+                    <div class="console-line system">[System] Buyer Sweep Scalper initialized. Monitoring order flow...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function fetchUpdates() {
+            try {
+                let response = await fetch('/api/status');
+                if (!response.ok) {
+                    response = await fetch('/api/state');
+                }
+                if (!response.ok) return;
+                const data = await response.json();
+
+                // Check Halted Status
+                if (data.is_halted) {
+                    document.getElementById('halt-banner').style.display = 'block';
+                    document.getElementById('halt-banner').innerText = `🛑 BOT PERMANENTLY HALTED: ${data.halt_reason || "Lost the $1 bankroll."} As instructed, no more trades will ever be placed.`;
+                    document.getElementById('bot-status-badge').className = 'status-badge halted';
+                    document.getElementById('bot-status-text').innerText = 'HALTED ON LOSS';
+                }
+
+                // Update Sizing & Bankroll
+                document.getElementById('current-bankroll').innerText = `$${(data.bankroll || 1.00).toFixed(2)}`;
+                document.getElementById('wins-badge').innerText = `${data.consecutive_wins || 0} ROLLOVER WINS`;
+                document.getElementById('wallet-balance').innerText = `$${data.balance ? data.balance.toFixed(2) : '0.00'}`;
+
+                // Update Book Info
+                if (data.orderbook) {
+                    const upStr = data.orderbook.up_ask ? `$${data.orderbook.up_ask.toFixed(2)}` : '-';
+                    const dnStr = data.orderbook.down_ask ? `$${data.orderbook.down_ask.toFixed(2)}` : '-';
+                    document.getElementById('book-spread').innerText = `UP: ${upStr} | DN: ${dnStr}`;
+                }
+                if (data.market && data.market.price) {
+                    document.getElementById('btc-info').innerText = `BTC: $${data.market.price.toLocaleString(undefined, {minimumFractionDigits: 1, maximumFractionDigits: 1})}`;
+                }
+
+                // Update Sweep Info
+                if (data.last_sweep) {
+                    document.getElementById('sweep-status').innerText = `${data.last_sweep.side} SURGE`;
+                    document.getElementById('sweep-status').style.color = 'var(--accent-green)';
+                    document.getElementById('sweep-info').innerText = data.last_sweep.details || 'Buyer surge detected';
+                } else {
+                    document.getElementById('sweep-status').innerText = 'MONITORING';
+                    document.getElementById('sweep-status').style.color = 'var(--accent-purple)';
+                    document.getElementById('sweep-info').innerText = 'Watching for order book surges...';
+                }
+
+                // Update Active Scalp
+                if (data.is_halted) {
+                    document.getElementById('scalp-state-badge').innerText = 'PERM HALTED';
+                    document.getElementById('scalp-state-badge').style.color = 'var(--accent-red)';
+                    document.getElementById('scalp-side').innerText = 'HALTED';
+                    document.getElementById('scalp-target').innerText = 'No more trades permitted.';
+                } else if (data.scalp && data.scalp.active) {
+                    document.getElementById('scalp-state-badge').innerText = 'IN POSITION';
+                    document.getElementById('scalp-state-badge').style.color = 'var(--accent-green)';
+                    document.getElementById('scalp-side').innerText = `${data.scalp.side} @ $${data.scalp.entry_price.toFixed(4)}`;
+                    document.getElementById('scalp-target').innerText = `Target Sell: >= $${data.scalp.target_sell_price.toFixed(4)}`;
+                } else if (data.window_trade_done) {
+                    document.getElementById('scalp-state-badge').innerText = 'WINDOW DONE';
+                    document.getElementById('scalp-state-badge').style.color = 'var(--accent-cyan)';
+                    document.getElementById('scalp-side').innerText = 'SCALP EXITED';
+                    document.getElementById('scalp-target').innerText = 'Resting until next window...';
+                } else {
+                    document.getElementById('scalp-state-badge').innerText = 'SCANNING';
+                    document.getElementById('scalp-state-badge').style.color = '#eab308';
+                    document.getElementById('scalp-side').innerText = 'WAITING SWEEP';
+                    document.getElementById('scalp-target').innerText = 'Target: +1¢ Quick Exit';
+                }
+
+                // Render Trades
+                const tradesBody = document.getElementById('trades-body');
+                if (data.trades && data.trades.length > 0) {
+                    tradesBody.innerHTML = '';
+                    data.trades.forEach(t => {
+                        const tr = document.createElement('tr');
+                        const outcomeClass = t.outcome.toLowerCase() === 'win' ? 'win' : (t.outcome.toLowerCase() === 'loss' ? 'loss' : 'even');
+                        const outcomeBadge = `<span class="badge ${outcomeClass}">${t.outcome}</span>`;
+                        const pnlColor = t.pnl > 0 ? 'var(--accent-green)' : (t.pnl < 0 ? 'var(--accent-red)' : 'var(--text-secondary)');
+                        const pnlSign = t.pnl > 0 ? '+' : '';
+                        
+                        tr.innerHTML = `
+                            <td>${t.time}</td>
+                            <td><strong>${t.side}</strong></td>
+                            <td>$${t.stake.toFixed(2)}</td>
+                            <td>$${t.entry_price.toFixed(4)}</td>
+                            <td>$${t.exit_price.toFixed(4)}</td>
+                            <td style="color: ${pnlColor}; font-weight: 600;">${pnlSign}$${t.pnl.toFixed(4)}</td>
+                            <td>${outcomeBadge}</td>
+                        `;
+                        tradesBody.appendChild(tr);
+                    });
+                } else {
+                    tradesBody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-secondary);">No sweep trades placed yet.</td></tr>';
+                }
+
+                // Render Console Logs
+                const consoleContainer = document.getElementById('console-logs');
+                if (data.logs && data.logs.length > 0) {
+                    consoleContainer.innerHTML = '';
+                    data.logs.forEach(log => {
+                        const div = document.createElement('div');
+                        div.className = 'console-line';
+                        if (log.includes('COMPLETE') || log.includes('TAKE_PROFIT') || log.includes('WIN') || log.includes('ROLLOVER')) div.className += ' success';
+                        else if (log.includes('LOSS') || log.includes('HALT') || log.includes('FAILED') || log.includes('ERROR')) div.className += ' error';
+                        else if (log.includes('SWEEP') || log.includes('SURGE') || log.includes('Placing') || log.includes('LIVE')) div.className += ' warning';
+                        else div.className += ' system';
+                        
+                        div.innerText = log;
+                        consoleContainer.appendChild(div);
+                    });
+                    consoleContainer.scrollTop = consoleContainer.scrollHeight;
+                }
+
+            } catch (err) {
+                console.error("Error fetching status updates:", err);
+            }
+        }
+
+        setInterval(fetchUpdates, 1500);
+        fetchUpdates();
+    </script>
+</body>
+</html>

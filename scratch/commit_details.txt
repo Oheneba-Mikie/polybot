@@ -1,0 +1,436 @@
+==================================================
+e97c1a0
+commit e97c1a0e6a768b03730ada83cfeb7f2e58841725
+Author: Oheneba-Mikie <ohenebamikie@gmail.com>
+Date:   Mon Jul 20 22:43:28 2026 +0000
+
+    working an dprofiting with the 5mins hybrid
+
+ five_mins_hybrid_sprint.py              |  27 +-
+ guarded_hybrid_sprint.py                | 950 +++++++++++++++++++++++++++++++
+ peak_hours_run.py                       | 857 ++++++++++++++++++++++++++++
+ railway_deploy/Procfile                 |   1 +
+ railway_deploy/app.py                   | 770 +++++++++++++++++++++++++
+ railway_deploy/requirements.txt         |   6 +
+ railway_deploy/templates/dashboard.html | 458 +++++++++++++++
+ sprint_state.json                       |   8 +
+ staggered_hybrid_sprint.py              | 966 ++++++++++++++++++++++++++++++++
+ triple_close_scaling_bot.py             | 849 ++++++++++++++++++++++++++++
+ triple_hybrid_scaling_bot.py            | 857 ++++++++++++++++++++++++++++
+ 11 files changed, 5746 insertions(+), 3 deletions(-)
+
+==================================================
+45ed4d5
+commit 45ed4d53f88189d0eadde3d3788fc5fba1221b19
+Author: Oheneba-Mikie <ohenebamikie@gmail.com>
+Date:   Sun Jul 19 23:15:06 2026 +0000
+
+    rollover winnings works and smarrt scalling is for removing while wining
+
+ rollover_winnings_bot.py | 104 ++++--
+ smart_scaling_bot.py     | 836 +++++++++++++++++++++++++++++++++++++++++++++++
+ 2 files changed, 907 insertions(+), 33 deletions(-)
+
+==================================================
+0437b2c
+commit 0437b2c18844da0778f28e58701b588c3a3bc57d
+Author: Oheneba-Mikie <ohenebamikie@gmail.com>
+Date:   Wed Aug 19 16:39:48 2026 +0000
+
+    fireworks
+
+ bot_2/Procfile                                     |    1 +
+ bot_2/app.py                                       |  556 +++++++++
+ bot_2/py_clob_client_v2/__init__.py                |   97 ++
+ bot_2/py_clob_client_v2/client.py                  | 1245 ++++++++++++++++++++
+ bot_2/py_clob_client_v2/clob_types.py              |  512 ++++++++
+ bot_2/py_clob_client_v2/config.py                  |   36 +
+ bot_2/py_clob_client_v2/constants.py               |   40 +
+ bot_2/py_clob_client_v2/endpoints.py               |  103 ++
+ bot_2/py_clob_client_v2/exceptions.py              |   32 +
+ bot_2/py_clob_client_v2/fees.py                    |   40 +
+ bot_2/py_clob_client_v2/headers/__init__.py        |   10 +
+ bot_2/py_clob_client_v2/headers/headers.py         |   69 ++
+ bot_2/py_clob_client_v2/http_helpers/__init__.py   |   20 +
+ bot_2/py_clob_client_v2/http_helpers/helpers.py    |  227 ++++
+ bot_2/py_clob_client_v2/order_builder/__init__.py  |    9 +
+ bot_2/py_clob_client_v2/order_builder/builder.py   |  336 ++++++
+ bot_2/py_clob_client_v2/order_builder/constants.py |    2 +
+ bot_2/py_clob_client_v2/order_builder/helpers.py   |   25 +
+ bot_2/py_clob_client_v2/order_utils/__init__.py    |   16 +
+ .../py_clob_client_v2/order_utils/abi/__init__.py  |    0
+ bot_2/py_clob_client_v2/order_utils/abi/abis.py    |   13 +
+ .../order_utils/exchange_order_builder_v1.py       |  103 ++
+ .../order_utils/exchange_order_builder_v2.py       |  241 ++++
+ .../order_utils/model/__init__.py                  |   15 +
+ .../model/ctf_exchange_v1_typed_data.py            |   25 +
+ .../model/ctf_exchange_v2_typed_data.py            |   24 +
+ .../order_utils/model/order_data_v1.py             |   78 ++
+ .../order_utils/model/order_data_v2.py             |   78 ++
+ bot_2/py_clob_client_v2/order_utils/model/side.py  |   11 +
+ .../order_utils/model/signature_type_v1.py         |   16 +
+ .../order_utils/model/signature_type_v2.py         |   19 +
+ bot_2/py_clob_client_v2/order_utils/utils.py       |    6 +
+ bot_2/py_clob_client_v2/rfq/__init__.py            |   61 +
+ bot_2/py_clob_client_v2/rfq/rfq_client.py          |  520 ++++++++
+ bot_2/py_clob_client_v2/rfq/rfq_helpers.py         |  161 +++
+ bot_2/py_clob_client_v2/rfq/rfq_types.py           |  439 +++++++
+ bot_2/py_clob_client_v2/signer.py                  |   22 +
+ bot_2/py_clob_client_v2/signing/__init__.py        |    3 +
+ bot_2/py_clob_client_v2/signing/eip712.py          |   28 +
+ bot_2/py_clob_client_v2/signing/hmac.py            |   23 +
+ bot_2/py_clob_client_v2/signing/model.py           |    8 +
+ bot_2/py_clob_client_v2/utilities.py               |   69 ++
+ bot_2/requirements.txt                             |   10 +
+ bot_2/templates/dashboard.html                     |  254 ++++
+ bot_3/Procfile                                     |    1 +
+ bot_3/app.py                                       |    1 +
+ bot_3/py_clob_client_v2/__init__.py                |   97 ++
+ bot_3/py_clob_client_v2/client.py                  | 1245 ++++++++++++++++++++
+ bot_3/py_clob_client_v2/clob_types.py              |  512 ++++++++
+ bot_3/py_clob_client_v2/config.py                  |   36 +
+ bot_3/py_clob_client_v2/constants.py               |   40 +
+ bot_3/py_clob_client_v2/endpoints.py               |  103 ++
+ bot_3/py_clob_client_v2/exceptions.py              |   32 +
+ bot_3/py_clob_client_v2/fees.py                    |   40 +
+ bot_3/py_clob_client_v2/headers/__init__.py        |   10 +
+ bot_3/py_clob_client_v2/headers/headers.py         |   69 ++
+ bot_3/py_clob_client_v2/http_helpers/__init__.py   |   20 +
+ bot_3/py_clob_client_v2/http_helpers/helpers.py    |  227 ++++
+ bot_3/py_clob_client_v2/order_builder/__init__.py  |    9 +
+ bot_3/py_clob_client_v2/order_builder/builder.py   |  336 ++++++
+ bot_3/py_clob_client_v2/order_builder/constants.py |    2 +
+ bot_3/py_clob_client_v2/order_builder/helpers.py   |   25 +
+ bot_3/py_clob_client_v2/order_utils/__init__.py    |   16 +
+ .../py_clob_client_v2/order_utils/abi/__init__.py  |    0
+ bot_3/py_clob_client_v2/order_utils/abi/abis.py    |   13 +
+ .../order_utils/exchange_order_builder_v1.py       |  103 ++
+ .../order_utils/exchange_order_builder_v2.py       |  241 ++++
+ .../order_utils/model/__init__.py                  |   15 +
+ .../model/ctf_exchange_v1_typed_data.py            |   25 +
+ .../model/ctf_exchange_v2_typed_data.py            |   24 +
+ .../order_utils/model/order_data_v1.py             |   78 ++
+ .../order_utils/model/order_data_v2.py             |   78 ++
+ bot_3/py_clob_client_v2/order_utils/model/side.py  |   11 +
+ .../order_utils/model/signature_type_v1.py         |   16 +
+ .../order_utils/model/signature_type_v2.py         |   19 +
+ bot_3/py_clob_client_v2/order_utils/utils.py       |    6 +
+ bot_3/py_clob_client_v2/rfq/__init__.py            |   61 +
+ bot_3/py_clob_client_v2/rfq/rfq_client.py          |  520 ++++++++
+ bot_3/py_clob_client_v2/rfq/rfq_helpers.py         |  161 +++
+ bot_3/py_clob_client_v2/rfq/rfq_types.py           |  439 +++++++
+ bot_3/py_clob_client_v2/signer.py                  |   22 +
+ bot_3/py_clob_client_v2/signing/__init__.py        |    3 +
+ bot_3/py_clob_client_v2/signing/eip712.py          |   28 +
+ bot_3/py_clob_client_v2/signing/hmac.py            |   23 +
+ bot_3/py_clob_client_v2/signing/model.py           |    8 +
+ bot_3/py_clob_client_v2/utilities.py               |   69 ++
+ bot_3/requirements.txt                             |   10 +
+ bot_3/templates/dashboard.html                     |  446 +++++++
+ bot_4/Procfile                                     |    1 +
+ bot_4/app.py                                       |    1 +
+ bot_4/py_clob_client_v2/__init__.py                |   97 ++
+ bot_4/py_clob_client_v2/client.py                  | 1245 ++++++++++++++++++++
+ bot_4/py_clob_client_v2/clob_types.py              |  512 ++++++++
+ bot_4/py_clob_client_v2/config.py                  |   36 +
+ bot_4/py_clob_client_v2/constants.py               |   40 +
+ bot_4/py_clob_client_v2/endpoints.py               |  103 ++
+ bot_4/py_clob_client_v2/exceptions.py              |   32 +
+ bot_4/py_clob_client_v2/fees.py                    |   40 +
+ bot_4/py_clob_client_v2/headers/__init__.py        |   10 +
+ bot_4/py_clob_client_v2/headers/headers.py         |   69 ++
+ bot_4/py_clob_client_v2/http_helpers/__init__.py   |   20 +
+ bot_4/py_clob_client_v2/http_helpers/helpers.py    |  227 ++++
+ bot_4/py_clob_client_v2/order_builder/__init__.py  |    9 +
+ bot_4/py_clob_client_v2/order_builder/builder.py   |  336 ++++++
+ bot_4/py_clob_client_v2/order_builder/constants.py |    2 +
+ bot_4/py_clob_client_v2/order_builder/helpers.py   |   25 +
+ bot_4/py_clob_client_v2/order_utils/__init__.py    |   16 +
+ .../py_clob_client_v2/order_utils/abi/__init__.py  |    0
+ bot_4/py_clob_client_v2/order_utils/abi/abis.py    |   13 +
+ .../order_utils/exchange_order_builder_v1.py       |  103 ++
+ .../order_utils/exchange_order_builder_v2.py       |  241 ++++
+ .../order_utils/model/__init__.py                  |   15 +
+ .../model/ctf_exchange_v1_typed_data.py            |   25 +
+ .../model/ctf_exchange_v2_typed_data.py            |   24 +
+ .../order_utils/model/order_data_v1.py             |   78 ++
+ .../order_utils/model/order_data_v2.py             |   78 ++
+ bot_4/py_clob_client_v2/order_utils/model/side.py  |   11 +
+ .../order_utils/model/signature_type_v1.py         |   16 +
+ .../order_utils/model/signature_type_v2.py         |   19 +
+ bot_4/py_clob_client_v2/order_utils/utils.py       |    6 +
+ bot_4/py_clob_client_v2/rfq/__init__.py            |   61 +
+ bot_4/py_clob_client_v2/rfq/rfq_client.py          |  520 ++++++++
+ bot_4/py_clob_client_v2/rfq/rfq_helpers.py         |  161 +++
+ bot_4/py_clob_client_v2/rfq/rfq_types.py           |  439 +++++++
+ bot_4/py_clob_client_v2/signer.py                  |   22 +
+ bot_4/py_clob_client_v2/signing/__init__.py        |    3 +
+ bot_4/py_clob_client_v2/signing/eip712.py          |   28 +
+ bot_4/py_clob_client_v2/signing/hmac.py            |   23 +
+ bot_4/py_clob_client_v2/signing/model.py           |    8 +
+ bot_4/py_clob_client_v2/utilities.py               |   69 ++
+ bot_4/requirements.txt                             |   10 +
+ bot_4/templates/dashboard.html                     |  446 +++++++
+ bot_5/Procfile                                     |    1 +
+ bot_5/app.py                                       |    1 +
+ bot_5/py_clob_client_v2/__init__.py                |   97 ++
+ bot_5/py_clob_client_v2/client.py                  | 1245 ++++++++++++++++++++
+ bot_5/py_clob_client_v2/clob_types.py              |  512 ++++++++
+ bot_5/py_clob_client_v2/config.py                  |   36 +
+ bot_5/py_clob_client_v2/constants.py               |   40 +
+ bot_5/py_clob_client_v2/endpoints.py               |  103 ++
+ bot_5/py_clob_client_v2/exceptions.py              |   32 +
+ bot_5/py_clob_client_v2/fees.py                    |   40 +
+ bot_5/py_clob_client_v2/headers/__init__.py        |   10 +
+ bot_5/py_clob_client_v2/headers/headers.py         |   69 ++
+ bot_5/py_clob_client_v2/http_helpers/__init__.py   |   20 +
+ bot_5/py_clob_client_v2/http_helpers/helpers.py    |  227 ++++
+ bot_5/py_clob_client_v2/order_builder/__init__.py  |    9 +
+ bot_5/py_clob_client_v2/order_builder/builder.py   |  336 ++++++
+ bot_5/py_clob_client_v2/order_builder/constants.py |    2 +
+ bot_5/py_clob_client_v2/order_builder/helpers.py   |   25 +
+ bot_5/py_clob_client_v2/order_utils/__init__.py    |   16 +
+ .../py_clob_client_v2/order_utils/abi/__init__.py  |    0
+ bot_5/py_clob_client_v2/order_utils/abi/abis.py    |   13 +
+ .../order_utils/exchange_order_builder_v1.py       |  103 ++
+ .../order_utils/exchange_order_builder_v2.py       |  241 ++++
+ .../order_utils/model/__init__.py                  |   15 +
+ .../model/ctf_exchange_v1_typed_data.py            |   25 +
+ .../model/ctf_exchange_v2_typed_data.py            |   24 +
+ .../order_utils/model/order_data_v1.py             |   78 ++
+ .../order_utils/model/order_data_v2.py             |   78 ++
+ bot_5/py_clob_client_v2/order_utils/model/side.py  |   11 +
+ .../order_utils/model/signature_type_v1.py         |   16 +
+ .../order_utils/model/signature_type_v2.py         |   19 +
+ bot_5/py_clob_client_v2/order_utils/utils.py       |    6 +
+ bot_5/py_clob_client_v2/rfq/__init__.py            |   61 +
+ bot_5/py_clob_client_v2/rfq/rfq_client.py          |  520 ++++++++
+ bot_5/py_clob_client_v2/rfq/rfq_helpers.py         |  161 +++
+ bot_5/py_clob_client_v2/rfq/rfq_types.py           |  439 +++++++
+ bot_5/py_clob_client_v2/signer.py                  |   22 +
+ bot_5/py_clob_client_v2/signing/__init__.py        |    3 +
+ bot_5/py_clob_client_v2/signing/eip712.py          |   28 +
+ bot_5/py_clob_client_v2/signing/hmac.py            |   23 +
+ bot_5/py_clob_client_v2/signing/model.py           |    8 +
+ bot_5/py_clob_client_v2/utilities.py               |   69 ++
+ bot_5/requirements.txt                             |   10 +
+ bot_5/templates/dashboard.html                     |  446 +++++++
+ bot_6/Procfile                                     |    1 +
+ bot_6/app.py                                       |  367 ++++++
+ bot_6/py_clob_client_v2/__init__.py                |   97 ++
+ bot_6/py_clob_client_v2/client.py                  | 1245 ++++++++++++++++++++
+ bot_6/py_clob_client_v2/clob_types.py              |  512 ++++++++
+ bot_6/py_clob_client_v2/config.py                  |   36 +
+ bot_6/py_clob_client_v2/constants.py               |   40 +
+ bot_6/py_clob_client_v2/endpoints.py               |  103 ++
+ bot_6/py_clob_client_v2/exceptions.py              |   32 +
+ bot_6/py_clob_client_v2/fees.py                    |   40 +
+ bot_6/py_clob_client_v2/headers/__init__.py        |   10 +
+ bot_6/py_clob_client_v2/headers/headers.py         |   69 ++
+ bot_6/py_clob_client_v2/http_helpers/__init__.py   |   20 +
+ bot_6/py_clob_client_v2/http_helpers/helpers.py    |  227 ++++
+ bot_6/py_clob_client_v2/order_builder/__init__.py  |    9 +
+ bot_6/py_clob_client_v2/order_builder/builder.py   |  336 ++++++
+ bot_6/py_clob_client_v2/order_builder/constants.py |    2 +
+ bot_6/py_clob_client_v2/order_builder/helpers.py   |   25 +
+ bot_6/py_clob_client_v2/order_utils/__init__.py    |   16 +
+ .../py_clob_client_v2/order_utils/abi/__init__.py  |    0
+ bot_6/py_clob_client_v2/order_utils/abi/abis.py    |   13 +
+ .../order_utils/exchange_order_builder_v1.py       |  103 ++
+ .../order_utils/exchange_order_builder_v2.py       |  241 ++++
+ .../order_utils/model/__init__.py                  |   15 +
+ .../model/ctf_exchange_v1_typed_data.py            |   25 +
+ .../model/ctf_exchange_v2_typed_data.py            |   24 +
+ .../order_utils/model/order_data_v1.py             |   78 ++
+ .../order_utils/model/order_data_v2.py             |   78 ++
+ bot_6/py_clob_client_v2/order_utils/model/side.py  |   11 +
+ .../order_utils/model/signature_type_v1.py         |   16 +
+ .../order_utils/model/signature_type_v2.py         |   19 +
+ bot_6/py_clob_client_v2/order_utils/utils.py       |    6 +
+ bot_6/py_clob_client_v2/rfq/__init__.py            |   61 +
+ bot_6/py_clob_client_v2/rfq/rfq_client.py          |  520 ++++++++
+ bot_6/py_clob_client_v2/rfq/rfq_helpers.py         |  161 +++
+ bot_6/py_clob_client_v2/rfq/rfq_types.py           |  439 +++++++
+ bot_6/py_clob_client_v2/signer.py                  |   22 +
+ bot_6/py_clob_client_v2/signing/__init__.py        |    3 +
+ bot_6/py_clob_client_v2/signing/eip712.py          |   28 +
+ bot_6/py_clob_client_v2/signing/hmac.py            |   23 +
+ bot_6/py_clob_client_v2/signing/model.py           |    8 +
+ bot_6/py_clob_client_v2/utilities.py               |   69 ++
+ bot_6/requirements.txt                             |   10 +
+ bot_6/templates/dashboard.html                     |  417 +++++++
+ bot_7/Procfile                                     |    1 +
+ bot_7/app.py                                       |  367 ++++++
+ bot_7/py_clob_client_v2/__init__.py                |   97 ++
+ bot_7/py_clob_client_v2/client.py                  | 1245 ++++++++++++++++++++
+ bot_7/py_clob_client_v2/clob_types.py              |  512 ++++++++
+ bot_7/py_clob_client_v2/config.py                  |   36 +
+ bot_7/py_clob_client_v2/constants.py               |   40 +
+ bot_7/py_clob_client_v2/endpoints.py               |  103 ++
+ bot_7/py_clob_client_v2/exceptions.py              |   32 +
+ bot_7/py_clob_client_v2/fees.py                    |   40 +
+ bot_7/py_clob_client_v2/headers/__init__.py        |   10 +
+ bot_7/py_clob_client_v2/headers/headers.py         |   69 ++
+ bot_7/py_clob_client_v2/http_helpers/__init__.py   |   20 +
+ bot_7/py_clob_client_v2/http_helpers/helpers.py    |  227 ++++
+ bot_7/py_clob_client_v2/order_builder/__init__.py  |    9 +
+ bot_7/py_clob_client_v2/order_builder/builder.py   |  336 ++++++
+ bot_7/py_clob_client_v2/order_builder/constants.py |    2 +
+ bot_7/py_clob_client_v2/order_builder/helpers.py   |   25 +
+ bot_7/py_clob_client_v2/order_utils/__init__.py    |   16 +
+ .../py_clob_client_v2/order_utils/abi/__init__.py  |    0
+ bot_7/py_clob_client_v2/order_utils/abi/abis.py    |   13 +
+ .../order_utils/exchange_order_builder_v1.py       |  103 ++
+ .../order_utils/exchange_order_builder_v2.py       |  241 ++++
+ .../order_utils/model/__init__.py                  |   15 +
+ .../model/ctf_exchange_v1_typed_data.py            |   25 +
+ .../model/ctf_exchange_v2_typed_data.py            |   24 +
+ .../order_utils/model/order_data_v1.py             |   78 ++
+ .../order_utils/model/order_data_v2.py             |   78 ++
+ bot_7/py_clob_client_v2/order_utils/model/side.py  |   11 +
+ .../order_utils/model/signature_type_v1.py         |   16 +
+ .../order_utils/model/signature_type_v2.py         |   19 +
+ bot_7/py_clob_client_v2/order_utils/utils.py       |    6 +
+ bot_7/py_clob_client_v2/rfq/__init__.py            |   61 +
+ bot_7/py_clob_client_v2/rfq/rfq_client.py          |  520 ++++++++
+ bot_7/py_clob_client_v2/rfq/rfq_helpers.py         |  161 +++
+ bot_7/py_clob_client_v2/rfq/rfq_types.py           |  439 +++++++
+ bot_7/py_clob_client_v2/signer.py                  |   22 +
+ bot_7/py_clob_client_v2/signing/__init__.py        |    3 +
+ bot_7/py_clob_client_v2/signing/eip712.py          |   28 +
+ bot_7/py_clob_client_v2/signing/hmac.py            |   23 +
+ bot_7/py_clob_client_v2/signing/model.py           |    8 +
+ bot_7/py_clob_client_v2/utilities.py               |   69 ++
+ bot_7/requirements.txt                             |   10 +
+ bot_7/templates/dashboard.html                     |  417 +++++++
+ latency_arb_railway_deploy/Procfile                |    2 +-
+ latency_arb_railway_deploy/app.py                  |  834 ++++++++-----
+ latency_arb_railway_deploy/requirements.txt        |    3 +-
+ .../templates/dashboard.html                       |  317 +++--
+ scratch/analyze_6h_master_98_99.py                 |   39 +
+ scratch/analyze_98_to_99_transitions.py            |   76 ++
+ scratch/analyze_past_2hours_pair_arb.py            |   68 ++
+ scratch/analyze_past_2hours_rollover.py            |   86 ++
+ scratch/analyze_past_3hours_pair_arb.py            |   36 +
+ scratch/analyze_user_payload_time.py               |   34 +
+ scratch/audit_3hour_pair_arb_volatility.py         |   70 ++
+ scratch/audit_6h_exact_tokens.py                   |   91 ++
+ scratch/audit_6h_flips_and_reversals.py            |   91 ++
+ scratch/audit_6h_parallel.py                       |   90 ++
+ scratch/audit_6h_precise.py                        |  100 ++
+ scratch/audit_btc_5m_trades.py                     |   46 +
+ scratch/audit_exact_overnight_pair_costs.py        |   54 +
+ scratch/audit_overnight_binance_volatility.py      |   51 +
+ scratch/audit_recent_trades_98_99.py               |   55 +
+ scratch/backtest_friday_saturday_volatility.py     |   67 ++
+ scratch/benchmark_clob_latency.py                  |   28 +
+ scratch/bridge_all_bsc_to_polygon.py               |   31 +
+ scratch/calculate_realistic_1000_timeline.py       |   48 +
+ scratch/calculate_rollover_compounding.py          |   30 +
+ scratch/calculate_timeline_to_1000_hybrid.py       |   37 +
+ scratch/check_all_bsc_bnb.py                       |   30 +
+ scratch/check_balance_rpc.py                       |   39 +
+ scratch/check_binance_5m.py                        |   45 +
+ scratch/check_bot_polygon_usdc.py                  |   32 +
+ scratch/check_both_bsc_balances.py                 |   33 +
+ scratch/check_both_usdc_contracts.py               |   39 +
+ scratch/check_bridge_tx_status.py                  |   34 +
+ scratch/check_bsc_bnb_balance.py                   |   26 +
+ scratch/check_bsc_nonce_and_txs.py                 |   23 +
+ scratch/check_bsc_tx.py                            |   58 +
+ scratch/check_clean_balance.py                     |   46 +
+ scratch/check_crypto_fiat_minimums.py              |   18 +
+ scratch/check_env_wallet.py                        |   18 +
+ scratch/check_exact_wallet_balance.py              |   50 +
+ scratch/check_full_account_portfolio.py            |   26 +
+ scratch/check_live_balance_now.py                  |   61 +
+ scratch/check_market_config.py                     |    9 +
+ scratch/check_mempool_tx.py                        |   24 +
+ scratch/check_nonces_receipts.py                   |   18 +
+ scratch/check_open_orders.py                       |   34 +
+ scratch/check_order_methods.py                     |   33 +
+ scratch/check_polygon_matic_balance.py             |   30 +
+ scratch/check_polymarket_clob_order_rules.py       |   43 +
+ scratch/check_polymarket_ctf_balance.py            |   40 +
+ scratch/check_polymarket_deposit_rules.py          |   22 +
+ scratch/check_polymarket_transfer_activity.py      |   15 +
+ scratch/check_proxy_code_bsc.py                    |   23 +
+ scratch/check_proxy_impl_slot.py                   |   18 +
+ scratch/check_proxy_storage_poly.py                |   18 +
+ scratch/check_ptb_source.py                        |   13 +
+ scratch/check_railway_services_health.py           |   38 +
+ scratch/check_redeemables.py                       |   20 +
+ scratch/check_rpc_stdlib.py                        |   51 +
+ scratch/check_tx_receipt.py                        |   21 +
+ scratch/check_wallet_dollar_accounting.py          |   10 +
+ scratch/clob_bal_snippet.py                        |   98 ++
+ scratch/decode_all_mined_txs.py                    |   25 +
+ scratch/decode_bsc_tx_details.py                   |   39 +
+ scratch/decode_polygon_tx.py                       |   56 +
+ scratch/decode_user_txs.py                         |   38 +
+ scratch/deep_balance_audit.py                      |   47 +
+ scratch/deep_check_polymarket_account.py           |   42 +
+ scratch/do_direct_transfer_to_main.py              |   46 +
+ scratch/execute_auto_bridge_bsc.py                 |  103 ++
+ scratch/execute_clean_bridge.py                    |   69 ++
+ scratch/find_polygon_creation_tx.py                |   31 +
+ scratch/find_polymarket_wallet.py                  |   17 +
+ scratch/full_chronological_dollar_audit.py         |   28 +
+ scratch/inspect_live_book_ladder.py                |   47 +
+ scratch/inspect_proxy_creation_poly.py             |   28 +
+ scratch/investigate_official_ptb.py                |   31 +
+ scratch/live_trace_wallet_deposit.py               |   52 +
+ scratch/master_audit_all_wallets.py                |  101 ++
+ scratch/measure_98_window_duration.py              |   65 +
+ scratch/past_2hours_opportunities.json             | 1146 ++++++++++++++++++
+ scratch/print_raw_trade_evidence.py                |   13 +
+ scratch/probe_binance_options.py                   |   21 +
+ scratch/query_positions_and_value.py               |   37 +
+ scratch/recent_2h_flow_logs.txt                    |  997 ++++++++++++++++
+ scratch/recent_30m_flow_logs.txt                   |  974 +++++++++++++++
+ scratch/run_accurate_6h_audit.py                   |   99 ++
+ scratch/send_polygon_usdc_raw.py                   |   57 +
+ scratch/send_polygon_usdc_to_binance.py            |   96 ++
+ scratch/test_balance_function.py                   |   23 +
+ scratch/test_clob_balance.py                       |   31 +
+ scratch/test_continuous_simulation_11m.py          |  104 ++
+ scratch/test_descending_sweep_simulation.py        |   74 ++
+ scratch/test_guaranteed_pair_arb_5m.py             |   53 +
+ scratch/test_guaranteed_pair_arbitrage.py          |   58 +
+ scratch/test_hist_ts.py                            |   14 +
+ scratch/test_liquidity_dryup_11m.py                |  120 ++
+ scratch/test_live_app_descending_sweep.py          |  114 ++
+ scratch/test_live_paper_11m_audit.py               |   56 +
+ scratch/test_local_bal.py                          |   46 +
+ scratch/test_polymarket_clob_ws.py                 |   85 ++
+ scratch/test_query_param.py                        |   18 +
+ scratch/test_raw_clob_ws.py                        |   59 +
+ scratch/test_sign_bsc_funder.py                    |   13 +
+ scratch/test_trades_endpoint.py                    |   22 +
+ scratch/test_ws_structure.py                       |   14 +
+ scratch/trace_user_transactions.py                 |   39 +
+ scratch/transfer_usdc_internal_bsc.py              |   46 +
+ scratch/transfer_usdc_nonce0.py                    |   44 +
+ scratch/verify_pk_address.py                       |    6 +
+ scratch/verify_usdc_contract_rules.py              |   43 +
+ scratch/web3_direct_transfer.py                    |   32 +
+ service_ids.json                                   |  Bin 0 -> 536 bytes
+ sprint_state.json                                  |    2 +-
+ 377 files changed, 41012 insertions(+), 426 deletions(-)
+
+==================================================
+a9fd3e4
+commit a9fd3e496f466e0ac6637bb646b79b7ffeebe220
+Author: Oheneba-Mikie <ohenebamikie@gmail.com>
+Date:   Mon Jul 20 03:01:02 2026 +0000
+
+    more
+
+ dual_streak_scaling_bot.py | 888 +++++++++++++++++++++++++++++++++++++++++
+ five_mins_hybrid_sprint.py | 971 ++++++++++++++++++++++++++++++++++++++++++++
+ hybrid_sprint_bot.py       | 976 +++++++++++++++++++++++++++++++++++++++++++++
+ requirements.txt           |   5 +
+ rollover_winnings_bot.py   |   3 +-
+ smart_scaling_bot.py       | 345 ++++++++--------
+ 6 files changed, 3015 insertions(+), 173 deletions(-)
+

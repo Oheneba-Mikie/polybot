@@ -1,0 +1,1647 @@
+=== ALL BOT STRATEGIES IN WORKSPACE ===
+
+--- .\50_percent_trading_bot.py ---
+   #!/usr/bin/env python3
+   """
+   """
+   # Load environment variables from .env
+
+--- .\capped_triple_hybrid_bot.py ---
+   #!/usr/bin/env python3
+   """
+   capped_triple_hybrid_bot.py — Triple Streak Hybrid Bot with $0.85 Max Price Cap for Big Profit Upside
+   """
+   # ── Config ──────────────────────────────────────────────────────────────────────
+   # Timing
+   # Strategy & Profit Guardrails
+
+--- .\close_to_market_bot.py ---
+   #!/usr/bin/env python3
+   """
+   """
+   # Load environment variables from .env
+
+--- .\close_to_market_offpeak_rollover_bot.py ---
+   #!/usr/bin/env python3
+   """
+   close_to_market_offpeak_rollover_bot.py — Off-Peak Close-to-Market Rollover Bot.
+   Winnings Rollover Compounding:
+   """
+
+--- .\close_to_market_rollover_bot.py ---
+   #!/usr/bin/env python3
+   """
+   Winnings Rollover Compounding:
+   """
+
+--- .\combined_double_stake_bot.py ---
+   """
+   Strategy Overview:
+   """
+   # Configuration
+   # Bet Window & Probes
+
+--- .\combined_single_stake_bot.py ---
+   """
+   Strategy Overview:
+   """
+   # Configuration
+   # Bet Window & Probes
+
+--- .\dual_streak_scaling_bot.py ---
+   #!/usr/bin/env python3
+   """
+   1. Streak 1 (All-Rules Streak): Evaluates T-80s down to T-5s using all timing rules.
+   Both streaks scale their starting stakes to 100% of live wallet balance (with a 5-cent fee buffer)
+   """
+   # Load environment variables from .env
+   # ── Config ──────────────────────────────────────────────────────────────────────
+
+--- .\five_mins_hybrid_sprint.py ---
+   #!/usr/bin/env python3
+   """
+   five_mins_hybrid_sprint.py — Advanced Hybrid Polymarket Bot
+   Phase 1: The Sprint (Wallet < $10.00)
+   - Streak 1 (All-Rules) and Streak 2 (Close-Only) run concurrently in the same window.
+   - Both streaks have a 4-Win Cap (Take Profit) to bank gains and reset safely.
+   """
+
+--- .\generate_credentials.py ---
+   #!/usr/bin/env python3
+   """
+   """
+   # Load env variables from .env if present
+   """Fetches the user's proxy wallet address from the Polymarket API."""
+
+--- .\guarded_hybrid_sprint.py ---
+   #!/usr/bin/env python3
+   """
+   guarded_hybrid_sprint.py — Advanced Hybrid Polymarket Bot with Max Price Guard and State Persistence
+   """
+   # ── Config ──────────────────────────────────────────────────────────────────────
+   # Bet window: place bet at the FIRST probe within this range
+   # Strategy Rules:
+   # Order-book probe marks (seconds before close)
+
+--- .\hybrid_sprint_bot.py ---
+   #!/usr/bin/env python3
+   """
+   hybrid_sprint_bot.py — Advanced Hybrid Polymarket Bot
+   Phase 1: The Sprint (Wallet < $10.00)
+   - Streak 1 (All-Rules) and Streak 2 (Close-Only) run concurrently in the same window.
+   - Both streaks have a 4-Win Cap (Take Profit) to bank gains and reset safely.
+   """
+
+--- .\latency_arb_bot.py ---
+   #!/usr/bin/env python3
+   """
+   latency_arb_bot.py — Black-Scholes Latency Arbitrage Bot for Polymarket BTC 5-Min Markets.
+   """
+   # Load env variables
+   # Strategy Config
+
+--- .\off_peak_5mins_hybrid_sprint.py ---
+   #!/usr/bin/env python3
+   """
+   off_peak_5mins_hybrid_sprint.py — Off-Peak Guardrailed 5-Min Hybrid Compounding Bot
+   1. Shrink Bet Window (BET_WINDOW_START = 25s):
+   4. Phase 1 Sprint (Wallet < $10.00) & Phase 2 Compounding (Wallet >= $10.00):
+   - Phase 2: 50/50 split between Streak 1 (All-Rules Guarded) and Streak 2 (Close-Only).
+   - 4-Win Cap (Take Profit) per streak to bank gains and reset safely.
+   """
+
+--- .\peak_hours_run.py ---
+   #!/usr/bin/env python3
+   """
+   peak_hours_run.py — Triple Streak Hybrid Bot Optimized for High-Volatility Volatility (Peak Hours)
+   - Each streak has a 4-Win Cap (Take Profit) to bank profits and reset.
+   """
+
+--- .\polybot.py ---
+   #!/usr/bin/env python3
+   """
+
+--- .\probe_close_timing.py ---
+   #!/usr/bin/env python3
+   """
+   """
+   # Load environment variables from .env
+
+--- .\ptb_defer_rollover_bot.py ---
+   """
+   - Base: Pure Close-to-Market Rollover Bot
+   """
+   # Configuration
+
+--- .\pure_close_double_stake_bot.py ---
+   #!/usr/bin/env python3
+   """
+   pure_close_rollover_bot.py - Pure Close-to-Market Always-Rollover Bot
+   """
+
+--- .\pure_close_rollover_bot.py ---
+   #!/usr/bin/env python3
+   """
+   pure_close_rollover_bot.py - Pure Close-to-Market Always-Rollover Bot
+   """
+
+--- .\pure_close_single_stake_bot.py ---
+   #!/usr/bin/env python3
+   """
+   pure_close_rollover_bot.py - Pure Close-to-Market Always-Rollover Bot
+   """
+
+--- .\rollover_winnings_bot.py ---
+   #!/usr/bin/env python3
+   """
+   Winnings Rollover Compounding:
+   """
+   # Load environment variables from .env
+
+--- .\smart_scaling_bot.py ---
+   #!/usr/bin/env python3
+   """
+   """
+
+--- .\smartbot.py ---
+   #!/usr/bin/env python3
+   """
+   Strategy (confirmed from live testing):
+   """
+   # ── Config ────────────────────────────────────────────────────────────────────
+
+--- .\staggered_hybrid_sprint.py ---
+   #!/usr/bin/env python3
+   """
+   staggered_hybrid_sprint.py — Advanced Hybrid Polymarket Bot with Staggered Streaks & $25.00 Close Safety
+   """
+   # ── Config ──────────────────────────────────────────────────────────────────────
+   # Bet window: place bet at the FIRST probe within this range
+   # Strategy Rules:
+   # Order-book probe marks (seconds before close)
+
+--- .\thispy.py ---
+   #!/usr/bin/env python3
+   """
+   """
+   # ── Config ──────────────────────────────────────────────────────────────────────
+
+--- .\track_ws.py ---
+   #!/usr/bin/env python3
+   """
+   """
+
+--- .\trend_catcher_rollover_bot.py ---
+   #!/usr/bin/env python3
+   """
+   trend_catcher_rollover_bot.py — Standalone Trend-Catcher Rollover Bot.
+   Winnings Rollover Compounding:
+   """
+
+--- .\triple_close_scaling_bot.py ---
+   #!/usr/bin/env python3
+   """
+   triple_close_scaling_bot.py — Triple Streak Close-Only Compounding Bot
+   - Each streak has a 4-Win Cap (Take Profit) to bank profits and reset.
+   """
+
+--- .\triple_hybrid_scaling_bot.py ---
+   #!/usr/bin/env python3
+   """
+   triple_hybrid_scaling_bot.py — Triple Streak Hybrid Compounding Bot
+   - Each streak has a 4-Win Cap (Take Profit) to bank profits and reset.
+   """
+
+--- .\webconsole.py ---
+   #!/usr/bin/env python3
+   """
+   """
+
+--- .\batch_arb_deploy\app.py ---
+   # CLOB imports
+   # Configuration
+
+--- .\batch_arb_deploy\py_clob_client_v2\__init__.py ---
+   # V1/V2 order input types
+   # Post order types
+
+--- .\batch_arb_deploy\py_clob_client_v2\config.py ---
+   """
+   """
+
+--- .\batch_arb_deploy\py_clob_client_v2\constants.py ---
+   # Access levels
+   CREDENTIAL_CREATION_WARNING = """🚨🚨🚨
+   🚨🚨🚨"""
+
+--- .\batch_arb_deploy\py_clob_client_v2\endpoints.py ---
+   # API Key endpoints
+   # Readonly API Key endpoints
+   # Builder API Key endpoints
+   # Live activity
+   # Markets
+   # Order Book
+
+--- .\batch_arb_deploy\py_clob_client_v2\signer.py ---
+   """
+   """
+
+--- .\batch_arb_deploy\py_clob_client_v2\utilities.py ---
+   """
+   """
+
+--- .\batch_arb_deploy\py_clob_client_v2\headers\headers.py ---
+   """
+   """
+
+--- .\batch_arb_deploy\py_clob_client_v2\order_utils\model\order_data_v1.py ---
+   """Input data for building a V1 order."""
+   """An unsigned V1 order ready for EIP712 signing."""
+
+--- .\batch_arb_deploy\py_clob_client_v2\order_utils\model\order_data_v2.py ---
+   """Input data for building a V2 order."""
+   """An unsigned V2 order ready for EIP712 signing."""
+
+--- .\batch_arb_deploy\py_clob_client_v2\order_utils\model\signature_type_v1.py ---
+   """
+   """
+   """ECDSA EIP712 signatures signed by EOAs"""
+   """EIP712 signatures signed by EOAs that own Polymarket Proxy wallets"""
+   """EIP712 signatures signed by EOAs that own Polymarket Gnosis safes"""
+
+--- .\batch_arb_deploy\py_clob_client_v2\order_utils\model\signature_type_v2.py ---
+   """
+   """
+   """ECDSA EIP712 signatures signed by EOAs"""
+   """EIP712 signatures signed by EOAs that own Polymarket Proxy wallets"""
+   """EIP712 signatures signed by EOAs that own Polymarket Gnosis safes"""
+   """EIP1271 signatures signed by smart contracts (smart contract wallets or vaults)"""
+
+--- .\batch_arb_deploy\py_clob_client_v2\rfq\__init__.py ---
+   # Input types
+   # Response types
+   # Client
+
+--- .\batch_arb_deploy\py_clob_client_v2\rfq\rfq_client.py ---
+   """
+   """
+
+--- .\batch_arb_deploy\py_clob_client_v2\rfq\rfq_helpers.py ---
+   """
+   """
+   # Token decimals constants
+   """
+
+--- .\batch_arb_deploy\py_clob_client_v2\rfq\rfq_types.py ---
+   """
+   """
+   # =============================================================================
+   # Input Types
+   # =============================================================================
+   """
+   """
+   """Token ID of the conditional token being traded."""
+
+--- .\batch_arb_deploy\py_clob_client_v2\signing\hmac.py ---
+   """
+   """
+   # Match the canonical API signing payload format.
+   # nosec: SHA256 is used here for API request signing (HMAC-SHA256), not password hashing
+   # ensure base64 encoded
+
+--- .\bot_2\app.py ---
+   # App Configuration & Credentials
+   # Global State
+
+--- .\bot_2\py_clob_client_v2\__init__.py ---
+   # V1/V2 order input types
+   # Post order types
+
+--- .\bot_2\py_clob_client_v2\config.py ---
+   """
+   """
+
+--- .\bot_2\py_clob_client_v2\constants.py ---
+   # Access levels
+   CREDENTIAL_CREATION_WARNING = """🚨🚨🚨
+   🚨🚨🚨"""
+
+--- .\bot_2\py_clob_client_v2\endpoints.py ---
+   # API Key endpoints
+   # Readonly API Key endpoints
+   # Builder API Key endpoints
+   # Live activity
+   # Markets
+   # Order Book
+
+--- .\bot_2\py_clob_client_v2\signer.py ---
+   """
+   """
+
+--- .\bot_2\py_clob_client_v2\utilities.py ---
+   """
+   """
+
+--- .\bot_2\py_clob_client_v2\headers\headers.py ---
+   """
+   """
+
+--- .\bot_2\py_clob_client_v2\order_utils\model\order_data_v1.py ---
+   """Input data for building a V1 order."""
+   """An unsigned V1 order ready for EIP712 signing."""
+
+--- .\bot_2\py_clob_client_v2\order_utils\model\order_data_v2.py ---
+   """Input data for building a V2 order."""
+   """An unsigned V2 order ready for EIP712 signing."""
+
+--- .\bot_2\py_clob_client_v2\order_utils\model\signature_type_v1.py ---
+   """
+   """
+   """ECDSA EIP712 signatures signed by EOAs"""
+   """EIP712 signatures signed by EOAs that own Polymarket Proxy wallets"""
+   """EIP712 signatures signed by EOAs that own Polymarket Gnosis safes"""
+
+--- .\bot_2\py_clob_client_v2\order_utils\model\signature_type_v2.py ---
+   """
+   """
+   """ECDSA EIP712 signatures signed by EOAs"""
+   """EIP712 signatures signed by EOAs that own Polymarket Proxy wallets"""
+   """EIP712 signatures signed by EOAs that own Polymarket Gnosis safes"""
+   """EIP1271 signatures signed by smart contracts (smart contract wallets or vaults)"""
+
+--- .\bot_2\py_clob_client_v2\rfq\__init__.py ---
+   # Input types
+   # Response types
+   # Client
+
+--- .\bot_2\py_clob_client_v2\rfq\rfq_client.py ---
+   """
+   """
+
+--- .\bot_2\py_clob_client_v2\rfq\rfq_helpers.py ---
+   """
+   """
+   # Token decimals constants
+   """
+
+--- .\bot_2\py_clob_client_v2\rfq\rfq_types.py ---
+   """
+   """
+   # =============================================================================
+   # Input Types
+   # =============================================================================
+   """
+   """
+   """Token ID of the conditional token being traded."""
+
+--- .\bot_2\py_clob_client_v2\signing\hmac.py ---
+   """
+   """
+   # Match the canonical API signing payload format.
+   # nosec: SHA256 is used here for API request signing (HMAC-SHA256), not password hashing
+   # ensure base64 encoded
+
+--- .\bot_3\app.py ---
+   # App Configuration & Credentials
+   # Global State
+
+--- .\bot_3\py_clob_client_v2\__init__.py ---
+   # V1/V2 order input types
+   # Post order types
+
+--- .\bot_3\py_clob_client_v2\config.py ---
+   """
+   """
+
+--- .\bot_3\py_clob_client_v2\constants.py ---
+   # Access levels
+   CREDENTIAL_CREATION_WARNING = """🚨🚨🚨
+   🚨🚨🚨"""
+
+--- .\bot_3\py_clob_client_v2\endpoints.py ---
+   # API Key endpoints
+   # Readonly API Key endpoints
+   # Builder API Key endpoints
+   # Live activity
+   # Markets
+   # Order Book
+
+--- .\bot_3\py_clob_client_v2\signer.py ---
+   """
+   """
+
+--- .\bot_3\py_clob_client_v2\utilities.py ---
+   """
+   """
+
+--- .\bot_3\py_clob_client_v2\headers\headers.py ---
+   """
+   """
+
+--- .\bot_3\py_clob_client_v2\order_utils\model\order_data_v1.py ---
+   """Input data for building a V1 order."""
+   """An unsigned V1 order ready for EIP712 signing."""
+
+--- .\bot_3\py_clob_client_v2\order_utils\model\order_data_v2.py ---
+   """Input data for building a V2 order."""
+   """An unsigned V2 order ready for EIP712 signing."""
+
+--- .\bot_3\py_clob_client_v2\order_utils\model\signature_type_v1.py ---
+   """
+   """
+   """ECDSA EIP712 signatures signed by EOAs"""
+   """EIP712 signatures signed by EOAs that own Polymarket Proxy wallets"""
+   """EIP712 signatures signed by EOAs that own Polymarket Gnosis safes"""
+
+--- .\bot_3\py_clob_client_v2\order_utils\model\signature_type_v2.py ---
+   """
+   """
+   """ECDSA EIP712 signatures signed by EOAs"""
+   """EIP712 signatures signed by EOAs that own Polymarket Proxy wallets"""
+   """EIP712 signatures signed by EOAs that own Polymarket Gnosis safes"""
+   """EIP1271 signatures signed by smart contracts (smart contract wallets or vaults)"""
+
+--- .\bot_3\py_clob_client_v2\rfq\__init__.py ---
+   # Input types
+   # Response types
+   # Client
+
+--- .\bot_3\py_clob_client_v2\rfq\rfq_client.py ---
+   """
+   """
+
+--- .\bot_3\py_clob_client_v2\rfq\rfq_helpers.py ---
+   """
+   """
+   # Token decimals constants
+   """
+
+--- .\bot_3\py_clob_client_v2\rfq\rfq_types.py ---
+   """
+   """
+   # =============================================================================
+   # Input Types
+   # =============================================================================
+   """
+   """
+   """Token ID of the conditional token being traded."""
+
+--- .\bot_3\py_clob_client_v2\signing\hmac.py ---
+   """
+   """
+   # Match the canonical API signing payload format.
+   # nosec: SHA256 is used here for API request signing (HMAC-SHA256), not password hashing
+   # ensure base64 encoded
+
+--- .\bot_4\py_clob_client_v2\__init__.py ---
+   # V1/V2 order input types
+   # Post order types
+
+--- .\bot_4\py_clob_client_v2\config.py ---
+   """
+   """
+
+--- .\bot_4\py_clob_client_v2\constants.py ---
+   # Access levels
+   CREDENTIAL_CREATION_WARNING = """🚨🚨🚨
+   🚨🚨🚨"""
+
+--- .\bot_4\py_clob_client_v2\endpoints.py ---
+   # API Key endpoints
+   # Readonly API Key endpoints
+   # Builder API Key endpoints
+   # Live activity
+   # Markets
+   # Order Book
+
+--- .\bot_4\py_clob_client_v2\signer.py ---
+   """
+   """
+
+--- .\bot_4\py_clob_client_v2\utilities.py ---
+   """
+   """
+
+--- .\bot_4\py_clob_client_v2\headers\headers.py ---
+   """
+   """
+
+--- .\bot_4\py_clob_client_v2\order_utils\model\order_data_v1.py ---
+   """Input data for building a V1 order."""
+   """An unsigned V1 order ready for EIP712 signing."""
+
+--- .\bot_4\py_clob_client_v2\order_utils\model\order_data_v2.py ---
+   """Input data for building a V2 order."""
+   """An unsigned V2 order ready for EIP712 signing."""
+
+--- .\bot_4\py_clob_client_v2\order_utils\model\signature_type_v1.py ---
+   """
+   """
+   """ECDSA EIP712 signatures signed by EOAs"""
+   """EIP712 signatures signed by EOAs that own Polymarket Proxy wallets"""
+   """EIP712 signatures signed by EOAs that own Polymarket Gnosis safes"""
+
+--- .\bot_4\py_clob_client_v2\order_utils\model\signature_type_v2.py ---
+   """
+   """
+   """ECDSA EIP712 signatures signed by EOAs"""
+   """EIP712 signatures signed by EOAs that own Polymarket Proxy wallets"""
+   """EIP712 signatures signed by EOAs that own Polymarket Gnosis safes"""
+   """EIP1271 signatures signed by smart contracts (smart contract wallets or vaults)"""
+
+--- .\bot_4\py_clob_client_v2\rfq\__init__.py ---
+   # Input types
+   # Response types
+   # Client
+
+--- .\bot_4\py_clob_client_v2\rfq\rfq_client.py ---
+   """
+   """
+
+--- .\bot_4\py_clob_client_v2\rfq\rfq_helpers.py ---
+   """
+   """
+   # Token decimals constants
+   """
+
+--- .\bot_4\py_clob_client_v2\rfq\rfq_types.py ---
+   """
+   """
+   # =============================================================================
+   # Input Types
+   # =============================================================================
+   """
+   """
+   """Token ID of the conditional token being traded."""
+
+--- .\bot_4\py_clob_client_v2\signing\hmac.py ---
+   """
+   """
+   # Match the canonical API signing payload format.
+   # nosec: SHA256 is used here for API request signing (HMAC-SHA256), not password hashing
+   # ensure base64 encoded
+
+--- .\bot_5\py_clob_client_v2\__init__.py ---
+   # V1/V2 order input types
+   # Post order types
+
+--- .\bot_5\py_clob_client_v2\config.py ---
+   """
+   """
+
+--- .\bot_5\py_clob_client_v2\constants.py ---
+   # Access levels
+   CREDENTIAL_CREATION_WARNING = """🚨🚨🚨
+   🚨🚨🚨"""
+
+--- .\bot_5\py_clob_client_v2\endpoints.py ---
+   # API Key endpoints
+   # Readonly API Key endpoints
+   # Builder API Key endpoints
+   # Live activity
+   # Markets
+   # Order Book
+
+--- .\bot_5\py_clob_client_v2\signer.py ---
+   """
+   """
+
+--- .\bot_5\py_clob_client_v2\utilities.py ---
+   """
+   """
+
+--- .\bot_5\py_clob_client_v2\headers\headers.py ---
+   """
+   """
+
+--- .\bot_5\py_clob_client_v2\order_utils\model\order_data_v1.py ---
+   """Input data for building a V1 order."""
+   """An unsigned V1 order ready for EIP712 signing."""
+
+--- .\bot_5\py_clob_client_v2\order_utils\model\order_data_v2.py ---
+   """Input data for building a V2 order."""
+   """An unsigned V2 order ready for EIP712 signing."""
+
+--- .\bot_5\py_clob_client_v2\order_utils\model\signature_type_v1.py ---
+   """
+   """
+   """ECDSA EIP712 signatures signed by EOAs"""
+   """EIP712 signatures signed by EOAs that own Polymarket Proxy wallets"""
+   """EIP712 signatures signed by EOAs that own Polymarket Gnosis safes"""
+
+--- .\bot_5\py_clob_client_v2\order_utils\model\signature_type_v2.py ---
+   """
+   """
+   """ECDSA EIP712 signatures signed by EOAs"""
+   """EIP712 signatures signed by EOAs that own Polymarket Proxy wallets"""
+   """EIP712 signatures signed by EOAs that own Polymarket Gnosis safes"""
+   """EIP1271 signatures signed by smart contracts (smart contract wallets or vaults)"""
+
+--- .\bot_5\py_clob_client_v2\rfq\__init__.py ---
+   # Input types
+   # Response types
+   # Client
+
+--- .\bot_5\py_clob_client_v2\rfq\rfq_client.py ---
+   """
+   """
+
+--- .\bot_5\py_clob_client_v2\rfq\rfq_helpers.py ---
+   """
+   """
+   # Token decimals constants
+   """
+
+--- .\bot_5\py_clob_client_v2\rfq\rfq_types.py ---
+   """
+   """
+   # =============================================================================
+   # Input Types
+   # =============================================================================
+   """
+   """
+   """Token ID of the conditional token being traded."""
+
+--- .\bot_5\py_clob_client_v2\signing\hmac.py ---
+   """
+   """
+   # Match the canonical API signing payload format.
+   # nosec: SHA256 is used here for API request signing (HMAC-SHA256), not password hashing
+   # ensure base64 encoded
+
+--- .\bot_6\app.py ---
+   # Constants
+   # Single simple dictionary state (identical to simple_flow_bot.py)
+
+--- .\bot_6\py_clob_client_v2\__init__.py ---
+   # V1/V2 order input types
+   # Post order types
+
+--- .\bot_6\py_clob_client_v2\config.py ---
+   """
+   """
+
+--- .\bot_6\py_clob_client_v2\constants.py ---
+   # Access levels
+   CREDENTIAL_CREATION_WARNING = """🚨🚨🚨
+   🚨🚨🚨"""
+
+--- .\bot_6\py_clob_client_v2\endpoints.py ---
+   # API Key endpoints
+   # Readonly API Key endpoints
+   # Builder API Key endpoints
+   # Live activity
+   # Markets
+   # Order Book
+
+--- .\bot_6\py_clob_client_v2\signer.py ---
+   """
+   """
+
+--- .\bot_6\py_clob_client_v2\utilities.py ---
+   """
+   """
+
+--- .\bot_6\py_clob_client_v2\headers\headers.py ---
+   """
+   """
+
+--- .\bot_6\py_clob_client_v2\order_utils\model\order_data_v1.py ---
+   """Input data for building a V1 order."""
+   """An unsigned V1 order ready for EIP712 signing."""
+
+--- .\bot_6\py_clob_client_v2\order_utils\model\order_data_v2.py ---
+   """Input data for building a V2 order."""
+   """An unsigned V2 order ready for EIP712 signing."""
+
+--- .\bot_6\py_clob_client_v2\order_utils\model\signature_type_v1.py ---
+   """
+   """
+   """ECDSA EIP712 signatures signed by EOAs"""
+   """EIP712 signatures signed by EOAs that own Polymarket Proxy wallets"""
+   """EIP712 signatures signed by EOAs that own Polymarket Gnosis safes"""
+
+--- .\bot_6\py_clob_client_v2\order_utils\model\signature_type_v2.py ---
+   """
+   """
+   """ECDSA EIP712 signatures signed by EOAs"""
+   """EIP712 signatures signed by EOAs that own Polymarket Proxy wallets"""
+   """EIP712 signatures signed by EOAs that own Polymarket Gnosis safes"""
+   """EIP1271 signatures signed by smart contracts (smart contract wallets or vaults)"""
+
+--- .\bot_6\py_clob_client_v2\rfq\__init__.py ---
+   # Input types
+   # Response types
+   # Client
+
+--- .\bot_6\py_clob_client_v2\rfq\rfq_client.py ---
+   """
+   """
+
+--- .\bot_6\py_clob_client_v2\rfq\rfq_helpers.py ---
+   """
+   """
+   # Token decimals constants
+   """
+
+--- .\bot_6\py_clob_client_v2\rfq\rfq_types.py ---
+   """
+   """
+   # =============================================================================
+   # Input Types
+   # =============================================================================
+   """
+   """
+   """Token ID of the conditional token being traded."""
+
+--- .\bot_6\py_clob_client_v2\signing\hmac.py ---
+   """
+   """
+   # Match the canonical API signing payload format.
+   # nosec: SHA256 is used here for API request signing (HMAC-SHA256), not password hashing
+   # ensure base64 encoded
+
+--- .\bot_7\app.py ---
+   # Constants
+   # Single simple dictionary state (identical to simple_flow_bot.py)
+
+--- .\bot_7\py_clob_client_v2\__init__.py ---
+   # V1/V2 order input types
+   # Post order types
+
+--- .\bot_7\py_clob_client_v2\config.py ---
+   """
+   """
+
+--- .\bot_7\py_clob_client_v2\constants.py ---
+   # Access levels
+   CREDENTIAL_CREATION_WARNING = """🚨🚨🚨
+   🚨🚨🚨"""
+
+--- .\bot_7\py_clob_client_v2\endpoints.py ---
+   # API Key endpoints
+   # Readonly API Key endpoints
+   # Builder API Key endpoints
+   # Live activity
+   # Markets
+   # Order Book
+
+--- .\bot_7\py_clob_client_v2\signer.py ---
+   """
+   """
+
+--- .\bot_7\py_clob_client_v2\utilities.py ---
+   """
+   """
+
+--- .\bot_7\py_clob_client_v2\headers\headers.py ---
+   """
+   """
+
+--- .\bot_7\py_clob_client_v2\order_utils\model\order_data_v1.py ---
+   """Input data for building a V1 order."""
+   """An unsigned V1 order ready for EIP712 signing."""
+
+--- .\bot_7\py_clob_client_v2\order_utils\model\order_data_v2.py ---
+   """Input data for building a V2 order."""
+   """An unsigned V2 order ready for EIP712 signing."""
+
+--- .\bot_7\py_clob_client_v2\order_utils\model\signature_type_v1.py ---
+   """
+   """
+   """ECDSA EIP712 signatures signed by EOAs"""
+   """EIP712 signatures signed by EOAs that own Polymarket Proxy wallets"""
+   """EIP712 signatures signed by EOAs that own Polymarket Gnosis safes"""
+
+--- .\bot_7\py_clob_client_v2\order_utils\model\signature_type_v2.py ---
+   """
+   """
+   """ECDSA EIP712 signatures signed by EOAs"""
+   """EIP712 signatures signed by EOAs that own Polymarket Proxy wallets"""
+   """EIP712 signatures signed by EOAs that own Polymarket Gnosis safes"""
+   """EIP1271 signatures signed by smart contracts (smart contract wallets or vaults)"""
+
+--- .\bot_7\py_clob_client_v2\rfq\__init__.py ---
+   # Input types
+   # Response types
+   # Client
+
+--- .\bot_7\py_clob_client_v2\rfq\rfq_client.py ---
+   """
+   """
+
+--- .\bot_7\py_clob_client_v2\rfq\rfq_helpers.py ---
+   """
+   """
+   # Token decimals constants
+   """
+
+--- .\bot_7\py_clob_client_v2\rfq\rfq_types.py ---
+   """
+   """
+   # =============================================================================
+   # Input Types
+   # =============================================================================
+   """
+   """
+   """Token ID of the conditional token being traded."""
+
+--- .\bot_7\py_clob_client_v2\signing\hmac.py ---
+   """
+   """
+   # Match the canonical API signing payload format.
+   # nosec: SHA256 is used here for API request signing (HMAC-SHA256), not password hashing
+   # ensure base64 encoded
+
+--- .\buyer_sweep_scalper_deploy\app.py ---
+   #!/usr/bin/env python3
+   """
+   app.py — Buyer Sweep Order Flow Scalper Bot + Live Web Dashboard for Railway
+   """
+   # Load environment variables
+   # ── Config ──────────────────────────────────────────────────────────────────────
+
+--- .\buyer_sweep_scalper_deploy\py_clob_client_v2\__init__.py ---
+   # V1/V2 order input types
+   # Post order types
+
+--- .\buyer_sweep_scalper_deploy\py_clob_client_v2\config.py ---
+   """
+   """
+
+--- .\buyer_sweep_scalper_deploy\py_clob_client_v2\constants.py ---
+   # Access levels
+   CREDENTIAL_CREATION_WARNING = """🚨🚨🚨
+   🚨🚨🚨"""
+
+--- .\buyer_sweep_scalper_deploy\py_clob_client_v2\endpoints.py ---
+   # API Key endpoints
+   # Readonly API Key endpoints
+   # Builder API Key endpoints
+   # Live activity
+   # Markets
+   # Order Book
+
+--- .\buyer_sweep_scalper_deploy\py_clob_client_v2\signer.py ---
+   """
+   """
+
+--- .\buyer_sweep_scalper_deploy\py_clob_client_v2\utilities.py ---
+   """
+   """
+
+--- .\buyer_sweep_scalper_deploy\py_clob_client_v2\headers\headers.py ---
+   """
+   """
+
+--- .\buyer_sweep_scalper_deploy\py_clob_client_v2\order_utils\model\order_data_v1.py ---
+   """Input data for building a V1 order."""
+   """An unsigned V1 order ready for EIP712 signing."""
+
+--- .\buyer_sweep_scalper_deploy\py_clob_client_v2\order_utils\model\order_data_v2.py ---
+   """Input data for building a V2 order."""
+   """An unsigned V2 order ready for EIP712 signing."""
+
+--- .\buyer_sweep_scalper_deploy\py_clob_client_v2\order_utils\model\signature_type_v1.py ---
+   """
+   """
+   """ECDSA EIP712 signatures signed by EOAs"""
+   """EIP712 signatures signed by EOAs that own Polymarket Proxy wallets"""
+   """EIP712 signatures signed by EOAs that own Polymarket Gnosis safes"""
+
+--- .\buyer_sweep_scalper_deploy\py_clob_client_v2\order_utils\model\signature_type_v2.py ---
+   """
+   """
+   """ECDSA EIP712 signatures signed by EOAs"""
+   """EIP712 signatures signed by EOAs that own Polymarket Proxy wallets"""
+   """EIP712 signatures signed by EOAs that own Polymarket Gnosis safes"""
+   """EIP1271 signatures signed by smart contracts (smart contract wallets or vaults)"""
+
+--- .\buyer_sweep_scalper_deploy\py_clob_client_v2\rfq\__init__.py ---
+   # Input types
+   # Response types
+   # Client
+
+--- .\buyer_sweep_scalper_deploy\py_clob_client_v2\rfq\rfq_client.py ---
+   """
+   """
+
+--- .\buyer_sweep_scalper_deploy\py_clob_client_v2\rfq\rfq_helpers.py ---
+   """
+   """
+   # Token decimals constants
+   """
+
+--- .\buyer_sweep_scalper_deploy\py_clob_client_v2\rfq\rfq_types.py ---
+   """
+   """
+   # =============================================================================
+   # Input Types
+   # =============================================================================
+   """
+   """
+   """Token ID of the conditional token being traded."""
+
+--- .\buyer_sweep_scalper_deploy\py_clob_client_v2\signing\hmac.py ---
+   """
+   """
+   # Match the canonical API signing payload format.
+   # nosec: SHA256 is used here for API request signing (HMAC-SHA256), not password hashing
+   # ensure base64 encoded
+
+--- .\close_to_market_deploypeak\main.py ---
+   #!/usr/bin/env python3
+   """
+   Winnings Rollover Compounding:
+   """
+
+--- .\close_to_market_offpeak_deploy\main.py ---
+   #!/usr/bin/env python3
+   """
+   close_to_market_offpeak_rollover_bot.py — Off-Peak Close-to-Market Rollover Bot.
+   Winnings Rollover Compounding:
+   """
+
+--- .\combined_railway_deploy\app.py ---
+   """
+   """
+   # State container for web dashboard
+
+--- .\combined_railway_deploy\py_clob_client_v2\__init__.py ---
+   # V1/V2 order input types
+   # Post order types
+
+--- .\combined_railway_deploy\py_clob_client_v2\config.py ---
+   """
+   """
+
+--- .\combined_railway_deploy\py_clob_client_v2\constants.py ---
+   # Access levels
+   CREDENTIAL_CREATION_WARNING = """🚨🚨🚨
+   🚨🚨🚨"""
+
+--- .\combined_railway_deploy\py_clob_client_v2\endpoints.py ---
+   # API Key endpoints
+   # Readonly API Key endpoints
+   # Builder API Key endpoints
+   # Live activity
+   # Markets
+   # Order Book
+
+--- .\combined_railway_deploy\py_clob_client_v2\signer.py ---
+   """
+   """
+
+--- .\combined_railway_deploy\py_clob_client_v2\utilities.py ---
+   """
+   """
+
+--- .\combined_railway_deploy\py_clob_client_v2\headers\headers.py ---
+   """
+   """
+
+--- .\combined_railway_deploy\py_clob_client_v2\order_utils\model\order_data_v1.py ---
+   """Input data for building a V1 order."""
+   """An unsigned V1 order ready for EIP712 signing."""
+
+--- .\combined_railway_deploy\py_clob_client_v2\order_utils\model\order_data_v2.py ---
+   """Input data for building a V2 order."""
+   """An unsigned V2 order ready for EIP712 signing."""
+
+--- .\combined_railway_deploy\py_clob_client_v2\order_utils\model\signature_type_v1.py ---
+   """
+   """
+   """ECDSA EIP712 signatures signed by EOAs"""
+   """EIP712 signatures signed by EOAs that own Polymarket Proxy wallets"""
+   """EIP712 signatures signed by EOAs that own Polymarket Gnosis safes"""
+
+--- .\combined_railway_deploy\py_clob_client_v2\order_utils\model\signature_type_v2.py ---
+   """
+   """
+   """ECDSA EIP712 signatures signed by EOAs"""
+   """EIP712 signatures signed by EOAs that own Polymarket Proxy wallets"""
+   """EIP712 signatures signed by EOAs that own Polymarket Gnosis safes"""
+   """EIP1271 signatures signed by smart contracts (smart contract wallets or vaults)"""
+
+--- .\combined_railway_deploy\py_clob_client_v2\rfq\__init__.py ---
+   # Input types
+   # Response types
+   # Client
+
+--- .\combined_railway_deploy\py_clob_client_v2\rfq\rfq_client.py ---
+   """
+   """
+
+--- .\combined_railway_deploy\py_clob_client_v2\rfq\rfq_helpers.py ---
+   """
+   """
+   # Token decimals constants
+   """
+
+--- .\combined_railway_deploy\py_clob_client_v2\rfq\rfq_types.py ---
+   """
+   """
+   # =============================================================================
+   # Input Types
+   # =============================================================================
+   """
+   """
+   """Token ID of the conditional token being traded."""
+
+--- .\combined_railway_deploy\py_clob_client_v2\signing\hmac.py ---
+   """
+   """
+   # Match the canonical API signing payload format.
+   # nosec: SHA256 is used here for API request signing (HMAC-SHA256), not password hashing
+   # ensure base64 encoded
+
+--- .\combined_single_railway_deploy\app.py ---
+   """
+   """
+   # State container for web dashboard
+
+--- .\combined_single_railway_deploy\py_clob_client_v2\__init__.py ---
+   # V1/V2 order input types
+   # Post order types
+
+--- .\combined_single_railway_deploy\py_clob_client_v2\config.py ---
+   """
+   """
+
+--- .\combined_single_railway_deploy\py_clob_client_v2\constants.py ---
+   # Access levels
+   CREDENTIAL_CREATION_WARNING = """🚨🚨🚨
+   🚨🚨🚨"""
+
+--- .\combined_single_railway_deploy\py_clob_client_v2\endpoints.py ---
+   # API Key endpoints
+   # Readonly API Key endpoints
+   # Builder API Key endpoints
+   # Live activity
+   # Markets
+   # Order Book
+
+--- .\combined_single_railway_deploy\py_clob_client_v2\signer.py ---
+   """
+   """
+
+--- .\combined_single_railway_deploy\py_clob_client_v2\utilities.py ---
+   """
+   """
+
+--- .\combined_single_railway_deploy\py_clob_client_v2\headers\headers.py ---
+   """
+   """
+
+--- .\combined_single_railway_deploy\py_clob_client_v2\order_utils\model\order_data_v1.py ---
+   """Input data for building a V1 order."""
+   """An unsigned V1 order ready for EIP712 signing."""
+
+--- .\combined_single_railway_deploy\py_clob_client_v2\order_utils\model\order_data_v2.py ---
+   """Input data for building a V2 order."""
+   """An unsigned V2 order ready for EIP712 signing."""
+
+--- .\combined_single_railway_deploy\py_clob_client_v2\order_utils\model\signature_type_v1.py ---
+   """
+   """
+   """ECDSA EIP712 signatures signed by EOAs"""
+   """EIP712 signatures signed by EOAs that own Polymarket Proxy wallets"""
+   """EIP712 signatures signed by EOAs that own Polymarket Gnosis safes"""
+
+--- .\combined_single_railway_deploy\py_clob_client_v2\order_utils\model\signature_type_v2.py ---
+   """
+   """
+   """ECDSA EIP712 signatures signed by EOAs"""
+   """EIP712 signatures signed by EOAs that own Polymarket Proxy wallets"""
+   """EIP712 signatures signed by EOAs that own Polymarket Gnosis safes"""
+   """EIP1271 signatures signed by smart contracts (smart contract wallets or vaults)"""
+
+--- .\combined_single_railway_deploy\py_clob_client_v2\rfq\__init__.py ---
+   # Input types
+   # Response types
+   # Client
+
+--- .\combined_single_railway_deploy\py_clob_client_v2\rfq\rfq_client.py ---
+   """
+   """
+
+--- .\combined_single_railway_deploy\py_clob_client_v2\rfq\rfq_helpers.py ---
+   """
+   """
+   # Token decimals constants
+   """
+
+--- .\combined_single_railway_deploy\py_clob_client_v2\rfq\rfq_types.py ---
+   """
+   """
+   # =============================================================================
+   # Input Types
+   # =============================================================================
+   """
+   """
+   """Token ID of the conditional token being traded."""
+
+--- .\combined_single_railway_deploy\py_clob_client_v2\signing\hmac.py ---
+   """
+   """
+   # Match the canonical API signing payload format.
+   # nosec: SHA256 is used here for API request signing (HMAC-SHA256), not password hashing
+   # ensure base64 encoded
+
+--- .\latency_arb_railway_deploy\app.py ---
+   # App Configuration & Credentials
+   # Global State
+
+--- .\latency_arb_railway_deploy\py_clob_client_v2\__init__.py ---
+   # V1/V2 order input types
+   # Post order types
+
+--- .\latency_arb_railway_deploy\py_clob_client_v2\config.py ---
+   """
+   """
+
+--- .\latency_arb_railway_deploy\py_clob_client_v2\constants.py ---
+   # Access levels
+   CREDENTIAL_CREATION_WARNING = """🚨🚨🚨
+   🚨🚨🚨"""
+
+--- .\latency_arb_railway_deploy\py_clob_client_v2\endpoints.py ---
+   # API Key endpoints
+   # Readonly API Key endpoints
+   # Builder API Key endpoints
+   # Live activity
+   # Markets
+   # Order Book
+
+--- .\latency_arb_railway_deploy\py_clob_client_v2\signer.py ---
+   """
+   """
+
+--- .\latency_arb_railway_deploy\py_clob_client_v2\utilities.py ---
+   """
+   """
+
+--- .\latency_arb_railway_deploy\py_clob_client_v2\headers\headers.py ---
+   """
+   """
+
+--- .\latency_arb_railway_deploy\py_clob_client_v2\order_utils\model\order_data_v1.py ---
+   """Input data for building a V1 order."""
+   """An unsigned V1 order ready for EIP712 signing."""
+
+--- .\latency_arb_railway_deploy\py_clob_client_v2\order_utils\model\order_data_v2.py ---
+   """Input data for building a V2 order."""
+   """An unsigned V2 order ready for EIP712 signing."""
+
+--- .\latency_arb_railway_deploy\py_clob_client_v2\order_utils\model\signature_type_v1.py ---
+   """
+   """
+   """ECDSA EIP712 signatures signed by EOAs"""
+   """EIP712 signatures signed by EOAs that own Polymarket Proxy wallets"""
+   """EIP712 signatures signed by EOAs that own Polymarket Gnosis safes"""
+
+--- .\latency_arb_railway_deploy\py_clob_client_v2\order_utils\model\signature_type_v2.py ---
+   """
+   """
+   """ECDSA EIP712 signatures signed by EOAs"""
+   """EIP712 signatures signed by EOAs that own Polymarket Proxy wallets"""
+   """EIP712 signatures signed by EOAs that own Polymarket Gnosis safes"""
+   """EIP1271 signatures signed by smart contracts (smart contract wallets or vaults)"""
+
+--- .\latency_arb_railway_deploy\py_clob_client_v2\rfq\__init__.py ---
+   # Input types
+   # Response types
+   # Client
+
+--- .\latency_arb_railway_deploy\py_clob_client_v2\rfq\rfq_client.py ---
+   """
+   """
+
+--- .\latency_arb_railway_deploy\py_clob_client_v2\rfq\rfq_helpers.py ---
+   """
+   """
+   # Token decimals constants
+   """
+
+--- .\latency_arb_railway_deploy\py_clob_client_v2\rfq\rfq_types.py ---
+   """
+   """
+   # =============================================================================
+   # Input Types
+   # =============================================================================
+   """
+   """
+   """Token ID of the conditional token being traded."""
+
+--- .\latency_arb_railway_deploy\py_clob_client_v2\signing\hmac.py ---
+   """
+   """
+   # Match the canonical API signing payload format.
+   # nosec: SHA256 is used here for API request signing (HMAC-SHA256), not password hashing
+   # ensure base64 encoded
+
+--- .\polymirror_railway_deploy\app.py ---
+   # App Configuration & Credentials
+   # Global State
+
+--- .\ptb_defer_railway_deploy\app.py ---
+   """
+   """
+
+--- .\ptb_defer_railway_deploy\py_clob_client_v2\__init__.py ---
+   # V1/V2 order input types
+   # Post order types
+
+--- .\ptb_defer_railway_deploy\py_clob_client_v2\config.py ---
+   """
+   """
+
+--- .\ptb_defer_railway_deploy\py_clob_client_v2\constants.py ---
+   # Access levels
+   CREDENTIAL_CREATION_WARNING = """🚨🚨🚨
+   🚨🚨🚨"""
+
+--- .\ptb_defer_railway_deploy\py_clob_client_v2\endpoints.py ---
+   # API Key endpoints
+   # Readonly API Key endpoints
+   # Builder API Key endpoints
+   # Live activity
+   # Markets
+   # Order Book
+
+--- .\ptb_defer_railway_deploy\py_clob_client_v2\signer.py ---
+   """
+   """
+
+--- .\ptb_defer_railway_deploy\py_clob_client_v2\utilities.py ---
+   """
+   """
+
+--- .\ptb_defer_railway_deploy\py_clob_client_v2\headers\headers.py ---
+   """
+   """
+
+--- .\ptb_defer_railway_deploy\py_clob_client_v2\order_utils\model\order_data_v1.py ---
+   """Input data for building a V1 order."""
+   """An unsigned V1 order ready for EIP712 signing."""
+
+--- .\ptb_defer_railway_deploy\py_clob_client_v2\order_utils\model\order_data_v2.py ---
+   """Input data for building a V2 order."""
+   """An unsigned V2 order ready for EIP712 signing."""
+
+--- .\ptb_defer_railway_deploy\py_clob_client_v2\order_utils\model\signature_type_v1.py ---
+   """
+   """
+   """ECDSA EIP712 signatures signed by EOAs"""
+   """EIP712 signatures signed by EOAs that own Polymarket Proxy wallets"""
+   """EIP712 signatures signed by EOAs that own Polymarket Gnosis safes"""
+
+--- .\ptb_defer_railway_deploy\py_clob_client_v2\order_utils\model\signature_type_v2.py ---
+   """
+   """
+   """ECDSA EIP712 signatures signed by EOAs"""
+   """EIP712 signatures signed by EOAs that own Polymarket Proxy wallets"""
+   """EIP712 signatures signed by EOAs that own Polymarket Gnosis safes"""
+   """EIP1271 signatures signed by smart contracts (smart contract wallets or vaults)"""
+
+--- .\ptb_defer_railway_deploy\py_clob_client_v2\rfq\__init__.py ---
+   # Input types
+   # Response types
+   # Client
+
+--- .\ptb_defer_railway_deploy\py_clob_client_v2\rfq\rfq_client.py ---
+   """
+   """
+
+--- .\ptb_defer_railway_deploy\py_clob_client_v2\rfq\rfq_helpers.py ---
+   """
+   """
+   # Token decimals constants
+   """
+
+--- .\ptb_defer_railway_deploy\py_clob_client_v2\rfq\rfq_types.py ---
+   """
+   """
+   # =============================================================================
+   # Input Types
+   # =============================================================================
+   """
+   """
+   """Token ID of the conditional token being traded."""
+
+--- .\ptb_defer_railway_deploy\py_clob_client_v2\signing\hmac.py ---
+   """
+   """
+   # Match the canonical API signing payload format.
+   # nosec: SHA256 is used here for API request signing (HMAC-SHA256), not password hashing
+   # ensure base64 encoded
+
+--- .\pure_close_railway_deploy\app.py ---
+   #!/usr/bin/env python3
+   """
+   app.py — Pure Close-to-Market Rollover Bot + Live Web Console Dashboard for Railway
+   """
+   # ── Environment & Config ────────────────────────────────────────────────────────
+   # Configurable Starting Stake (Set STARTING_STAKE_USD in Railway environment or .env)
+
+--- .\py_clob_client_v2\__init__.py ---
+   # V1/V2 order input types
+   # Post order types
+
+--- .\py_clob_client_v2\config.py ---
+   """
+   """
+
+--- .\py_clob_client_v2\constants.py ---
+   # Access levels
+   CREDENTIAL_CREATION_WARNING = """🚨🚨🚨
+   🚨🚨🚨"""
+
+--- .\py_clob_client_v2\endpoints.py ---
+   # API Key endpoints
+   # Readonly API Key endpoints
+   # Builder API Key endpoints
+   # Live activity
+   # Markets
+   # Order Book
+
+--- .\py_clob_client_v2\signer.py ---
+   """
+   """
+
+--- .\py_clob_client_v2\utilities.py ---
+   """
+   """
+
+--- .\py_clob_client_v2\headers\headers.py ---
+   """
+   """
+
+--- .\py_clob_client_v2\order_utils\model\order_data_v1.py ---
+   """Input data for building a V1 order."""
+   """An unsigned V1 order ready for EIP712 signing."""
+
+--- .\py_clob_client_v2\order_utils\model\order_data_v2.py ---
+   """Input data for building a V2 order."""
+   """An unsigned V2 order ready for EIP712 signing."""
+
+--- .\py_clob_client_v2\order_utils\model\signature_type_v1.py ---
+   """
+   """
+   """ECDSA EIP712 signatures signed by EOAs"""
+   """EIP712 signatures signed by EOAs that own Polymarket Proxy wallets"""
+   """EIP712 signatures signed by EOAs that own Polymarket Gnosis safes"""
+
+--- .\py_clob_client_v2\order_utils\model\signature_type_v2.py ---
+   """
+   """
+   """ECDSA EIP712 signatures signed by EOAs"""
+   """EIP712 signatures signed by EOAs that own Polymarket Proxy wallets"""
+   """EIP712 signatures signed by EOAs that own Polymarket Gnosis safes"""
+   """EIP1271 signatures signed by smart contracts (smart contract wallets or vaults)"""
+
+--- .\py_clob_client_v2\rfq\__init__.py ---
+   # Input types
+   # Response types
+   # Client
+
+--- .\py_clob_client_v2\rfq\rfq_client.py ---
+   """
+   """
+
+--- .\py_clob_client_v2\rfq\rfq_helpers.py ---
+   """
+   """
+   # Token decimals constants
+   """
+
+--- .\py_clob_client_v2\rfq\rfq_types.py ---
+   """
+   """
+   # =============================================================================
+   # Input Types
+   # =============================================================================
+   """
+   """
+   """Token ID of the conditional token being traded."""
+
+--- .\py_clob_client_v2\signing\hmac.py ---
+   """
+   """
+   # Match the canonical API signing payload format.
+   # nosec: SHA256 is used here for API request signing (HMAC-SHA256), not password hashing
+   # ensure base64 encoded
+
+--- .\railway_deploy\app.py ---
+   #!/usr/bin/env python3
+   """
+   app.py — $1 In-and-Out Sudden Trend Scalper Bot + Live Web Dashboard for Railway
+   Strategy:
+   5. Rollover & Halt Rules:
+   """
+   # Load environment variables
+   # ── Config ──────────────────────────────────────────────────────────────────────
+
+--- .\railway_offpeak_deploy\app.py ---
+   #!/usr/bin/env python3
+   """
+   app.py — Off-Peak Polymarket Trading Bot + Live Web Dashboard for Railway
+   """
+   # ── Config ──────────────────────────────────────────────────────────────────────
+   # OFF-PEAK GUARDRAILS
+
+--- .\scalper_bailout_deploy\app.py ---
+   "phase": "Phase 1: Sprint (100% Compounding)",
+
+--- .\scalper_bailout_deploy\py_clob_client_v2\__init__.py ---
+   # V1/V2 order input types
+   # Post order types
+
+--- .\scalper_bailout_deploy\py_clob_client_v2\config.py ---
+   """
+   """
+
+--- .\scalper_bailout_deploy\py_clob_client_v2\constants.py ---
+   # Access levels
+   CREDENTIAL_CREATION_WARNING = """🚨🚨🚨
+   🚨🚨🚨"""
+
+--- .\scalper_bailout_deploy\py_clob_client_v2\endpoints.py ---
+   # API Key endpoints
+   # Readonly API Key endpoints
+   # Builder API Key endpoints
+   # Live activity
+   # Markets
+   # Order Book
+
+--- .\scalper_bailout_deploy\py_clob_client_v2\signer.py ---
+   """
+   """
+
+--- .\scalper_bailout_deploy\py_clob_client_v2\utilities.py ---
+   """
+   """
+
+--- .\scalper_bailout_deploy\py_clob_client_v2\headers\headers.py ---
+   """
+   """
+
+--- .\scalper_bailout_deploy\py_clob_client_v2\order_utils\model\order_data_v1.py ---
+   """Input data for building a V1 order."""
+   """An unsigned V1 order ready for EIP712 signing."""
+
+--- .\scalper_bailout_deploy\py_clob_client_v2\order_utils\model\order_data_v2.py ---
+   """Input data for building a V2 order."""
+   """An unsigned V2 order ready for EIP712 signing."""
+
+--- .\scalper_bailout_deploy\py_clob_client_v2\order_utils\model\signature_type_v1.py ---
+   """
+   """
+   """ECDSA EIP712 signatures signed by EOAs"""
+   """EIP712 signatures signed by EOAs that own Polymarket Proxy wallets"""
+   """EIP712 signatures signed by EOAs that own Polymarket Gnosis safes"""
+
+--- .\scalper_bailout_deploy\py_clob_client_v2\order_utils\model\signature_type_v2.py ---
+   """
+   """
+   """ECDSA EIP712 signatures signed by EOAs"""
+   """EIP712 signatures signed by EOAs that own Polymarket Proxy wallets"""
+   """EIP712 signatures signed by EOAs that own Polymarket Gnosis safes"""
+   """EIP1271 signatures signed by smart contracts (smart contract wallets or vaults)"""
+
+--- .\scalper_bailout_deploy\py_clob_client_v2\rfq\__init__.py ---
+   # Input types
+   # Response types
+   # Client
+
+--- .\scalper_bailout_deploy\py_clob_client_v2\rfq\rfq_client.py ---
+   """
+   """
+
+--- .\scalper_bailout_deploy\py_clob_client_v2\rfq\rfq_helpers.py ---
+   """
+   """
+   # Token decimals constants
+   """
+
+--- .\scalper_bailout_deploy\py_clob_client_v2\rfq\rfq_types.py ---
+   """
+   """
+   # =============================================================================
+   # Input Types
+   # =============================================================================
+   """
+   """
+   """Token ID of the conditional token being traded."""
+
+--- .\scalper_bailout_deploy\py_clob_client_v2\signing\hmac.py ---
+   """
+   """
+   # Match the canonical API signing payload format.
+   # nosec: SHA256 is used here for API request signing (HMAC-SHA256), not password hashing
+   # ensure base64 encoded
+
+--- .\step_trend_scalper_deploy\app.py ---
+   #!/usr/bin/env python3
+   """
+   app.py — Bot 3: Step-Trend Displacement Scalper Bot + Live Web Dashboard for Railway
+   Strategy & Rules:
+   1. Trigger: Real-time BTC distance >= $25.00 from Price to Beat (PTB) with directional slope confirmation.
+   - On Win: Total balance ($1.00 + winnings) rolls over to fund the next window.
+   """
+   # Load environment variables
+
+--- .\step_trend_scalper_deploy\py_clob_client_v2\__init__.py ---
+   # V1/V2 order input types
+   # Post order types
+
+--- .\step_trend_scalper_deploy\py_clob_client_v2\config.py ---
+   """
+   """
+
+--- .\step_trend_scalper_deploy\py_clob_client_v2\constants.py ---
+   # Access levels
+   CREDENTIAL_CREATION_WARNING = """🚨🚨🚨
+   🚨🚨🚨"""
+
+--- .\step_trend_scalper_deploy\py_clob_client_v2\endpoints.py ---
+   # API Key endpoints
+   # Readonly API Key endpoints
+   # Builder API Key endpoints
+   # Live activity
+   # Markets
+   # Order Book
+
+--- .\step_trend_scalper_deploy\py_clob_client_v2\signer.py ---
+   """
+   """
+
+--- .\step_trend_scalper_deploy\py_clob_client_v2\utilities.py ---
+   """
+   """
+
+--- .\step_trend_scalper_deploy\py_clob_client_v2\headers\headers.py ---
+   """
+   """
+
+--- .\step_trend_scalper_deploy\py_clob_client_v2\order_utils\model\order_data_v1.py ---
+   """Input data for building a V1 order."""
+   """An unsigned V1 order ready for EIP712 signing."""
+
+--- .\step_trend_scalper_deploy\py_clob_client_v2\order_utils\model\order_data_v2.py ---
+   """Input data for building a V2 order."""
+   """An unsigned V2 order ready for EIP712 signing."""
+
+--- .\step_trend_scalper_deploy\py_clob_client_v2\order_utils\model\signature_type_v1.py ---
+   """
+   """
+   """ECDSA EIP712 signatures signed by EOAs"""
+   """EIP712 signatures signed by EOAs that own Polymarket Proxy wallets"""
+   """EIP712 signatures signed by EOAs that own Polymarket Gnosis safes"""
+
+--- .\step_trend_scalper_deploy\py_clob_client_v2\order_utils\model\signature_type_v2.py ---
+   """
+   """
+   """ECDSA EIP712 signatures signed by EOAs"""
+   """EIP712 signatures signed by EOAs that own Polymarket Proxy wallets"""
+   """EIP712 signatures signed by EOAs that own Polymarket Gnosis safes"""
+   """EIP1271 signatures signed by smart contracts (smart contract wallets or vaults)"""
+
+--- .\step_trend_scalper_deploy\py_clob_client_v2\rfq\__init__.py ---
+   # Input types
+   # Response types
+   # Client
+
+--- .\step_trend_scalper_deploy\py_clob_client_v2\rfq\rfq_client.py ---
+   """
+   """
+
+--- .\step_trend_scalper_deploy\py_clob_client_v2\rfq\rfq_helpers.py ---
+   """
+   """
+   # Token decimals constants
+   """
+
+--- .\step_trend_scalper_deploy\py_clob_client_v2\rfq\rfq_types.py ---
+   """
+   """
+   # =============================================================================
+   # Input Types
+   # =============================================================================
+   """
+   """
+   """Token ID of the conditional token being traded."""
+
+--- .\step_trend_scalper_deploy\py_clob_client_v2\signing\hmac.py ---
+   """
+   """
+   # Match the canonical API signing payload format.
+   # nosec: SHA256 is used here for API request signing (HMAC-SHA256), not password hashing
+   # ensure base64 encoded
+
+--- .\trend_catcher_deploy\main.py ---
+   #!/usr/bin/env python3
+   """
+   trend_catcher_rollover_bot.py — Standalone Trend-Catcher Rollover Bot.
+   Winnings Rollover Compounding:
+   """
