@@ -1,0 +1,23 @@
+Status: Scanning eth-updown-5m-1789345800 | T-167s | UP: $1.00 (0sh) | DN: $0.01 (165sh) | 🔍 Hunting Entry <= $0.45
+Completed: None
+Recent Logs:
+[00:31:56] T-184s | UP: $0.98 ( 147sh) | DN: $0.03 ( 388sh) | Comb: $1.010 | 🔍 ENTRY <= $0.45
+[00:31:58] T-182s | UP: $0.99 ( 534sh) | DN: $0.02 ( 251sh) | Comb: $1.010 | 🔍 ENTRY <= $0.45
+[00:31:59] T-181s | UP: $1.00 (   0sh) | DN: $0.01 (  10sh) | Comb: $1.010 | 🔍 ENTRY <= $0.45
+[00:32:00] ⚠️ [SOLVENCY GUARD] Balance ($0.25) < required pair cost ($103.95 for 105sh). Skipping Leg 1.
+[00:32:00] ⚠️ [SOLVENCY GUARD] Balance ($0.25) < required pair cost ($103.95 for 105sh). Skipping Leg 1.
+[00:32:00] ⚠️ [SOLVENCY GUARD] Balance ($0.25) < required pair cost ($103.95 for 105sh). Skipping Leg 1.
+[00:32:00] ⚠️ [SOLVENCY GUARD] Balance ($0.25) < required pair cost ($103.95 for 105sh). Skipping Leg 1.
+[00:32:01] T-179s | UP: $1.00 (   0sh) | DN: $0.01 ( 169sh) | Comb: $1.010 | 🔍 ENTRY <= $0.45
+[00:32:03] T-177s | UP: $1.00 (   0sh) | DN: $0.01 ( 169sh) | Comb: $1.010 | 🔍 ENTRY <= $0.45
+[00:32:04] T-176s | UP: $1.00 (   0sh) | DN: $0.01 ( 166sh) | Comb: $1.010 | 🔍 ENTRY <= $0.45
+[00:32:06] T-174s | UP: $1.00 (   0sh) | DN: $0.01 ( 156sh) | Comb: $1.010 | 🔍 ENTRY <= $0.45
+[00:32:08] T-173s | UP: $1.00 (   0sh) | DN: $0.01 ( 167sh) | Comb: $1.010 | 🔍 ENTRY <= $0.45
+[00:32:09] T-171s | UP: $1.00 (   0sh) | DN: $0.01 ( 162sh) | Comb: $1.010 | 🔍 ENTRY <= $0.45
+[00:32:10] ⚠️ [SOLVENCY GUARD] Balance ($0.25) < required pair cost ($103.95 for 105sh). Skipping Leg 1.
+[00:32:10] ⚠️ [SOLVENCY GUARD] Balance ($0.25) < required pair cost ($103.95 for 105sh). Skipping Leg 1.
+[00:32:10] ⚠️ [SOLVENCY GUARD] Balance ($0.25) < required pair cost ($103.95 for 105sh). Skipping Leg 1.
+[00:32:10] ⚠️ [SOLVENCY GUARD] Balance ($0.25) < required pair cost ($103.95 for 105sh). Skipping Leg 1.
+[00:32:11] ⚠️ [SOLVENCY GUARD] Balance ($0.25) < required pair cost ($103.95 for 105sh). Skipping Leg 1.
+[00:32:11] T-169s | UP: $1.00 (   0sh) | DN: $0.01 ( 165sh) | Comb: $1.010 | 🔍 ENTRY <= $0.45
+[00:32:12] T-168s | UP: $1.00 (   0sh) | DN: $0.01 ( 165sh) | Comb: $1.010 | 🔍 ENTRY <= $0.45

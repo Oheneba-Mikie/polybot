@@ -1,0 +1,34 @@
+{
+  "data": {
+    "project": {
+      "id": "68c99960-82ce-4e00-a23b-0cb28bf4d227",
+      "name": "polybot-97-scalper",
+      "environments": {
+        "edges": [
+          {
+            "node": {
+              "id": "8a457c42-0b85-401d-8aae-556195014077",
+              "name": "production"
+            }
+          }
+        ]
+      },
+      "services": {
+        "edges": [
+          {
+            "node": {
+              "id": "812a5eb5-d070-4ede-8665-9bd7ba4c39e8",
+              "name": "polybot-97-scalper"
+            }
+          },
+          {
+            "node": {
+              "id": "92085ee6-62ab-463d-a313-cab77706a35c",
+              "name": "batch-arb-bot"
+            }
+          }
+        ]
+      }
+    }
+  }
+}

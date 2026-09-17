@@ -1,0 +1,1 @@
+{"errors":[{"message":"Not Authorized","locations":[{"line":3,"column":3}],"path":["projects"],"extensions":{"code":"INTERNAL_SERVER_ERROR"},"traceId":"3540956594894613631"}],"data":null}
