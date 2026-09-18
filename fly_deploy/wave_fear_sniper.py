@@ -55,8 +55,8 @@ streak_count = 0                 # Consecutive wins in current streak
 total_streak_profit = 0.0        # Cumulative profit banked in streak
 MIN_SPOT_MOVE = 30.0            # At least $30 move from open
 MIN_ELAPSED_SEC = 200           # At least ~3.5 minutes into candle (T+200s)
-MAX_LEG1_PRICE = 0.96           # Allow strong wave up to $0.96
-MAX_COMBINED_COST = 0.98        # Combined pair cost capped at $0.98 (Guaranteed Profit)
+MAX_LEG1_PRICE = 0.98           # Allow strong wave up to $0.98
+MAX_COMBINED_COST = 0.99        # Combined pair cost capped at $0.99 (Guaranteed Profit)
 
 def log(msg: str):
     ts = datetime.datetime.now(datetime.timezone.utc).strftime("%H:%M:%S")
@@ -271,164 +271,208 @@ while True:
                 leg2_token, leg2_name = mkt["up_token"], "UP"
 
             if leg1_ask <= MAX_LEG1_PRICE:
-                # 5 to 8 Whole Shares Sprint Cycle
                 active_shares = float(min(8, max(5, int(current_stake / 0.98))))
-                log(f"🚀 [STEP 1: BUYING PANIC SIDE] Placing Limit Order (GTC) for {active_shares:.0f}sh {leg1_name} @ ${leg1_ask:.2f} (Stake: ${current_stake:.2f})...")
-                ok1, st1, fill_p1, oid1, tx1, lat1 = place_limit_order(leg1_token, leg1_ask, active_shares, leg1_name, OrderType.GTC)
+                leg1_filled = False
+                fill_p1 = leg1_ask
 
-                # If exchange accepted the order (matched or live in book), lock candle immediately!
-                if ok1 and (st1 in ("matched", "live") or tx1 or oid1):
-                    traded_windows.add(w_start)
-                    log(f"📌 [STATE: LEG 1 ACTIVE] {active_shares:.0f}sh {leg1_name} accepted by exchange (Status: {st1} | Order ID: {oid1[:12]}...). Candle {w_start} LOCKED.")
-                    if st1 == "matched" or tx1:
-                        log(f"✅ [LEG 1 MATCHED in {lat1:.1f}ms] Filled @ ${fill_p1:.2f}!")
-                    else:
-                        log(f"⏳ [LEG 1 RESTING in {lat1:.1f}ms] Order sitting @ ${fill_p1:.2f}. Proceeding to hedge...")
-                    
-                    # Step 2: Compute dynamic cheap target to guarantee pair cost <= $0.98
-                    cheap_target_p = max(0.01, round(MAX_COMBINED_COST - fill_p1, 2))
-                    log(f"🎯 [DYNAMIC HEDGE TARGET] Leg 1 @ ${fill_p1:.2f} -> Cheap Leg 2 Target: <= ${cheap_target_p:.2f} (Max pair cost: ${fill_p1 + cheap_target_p:.2f})")
-                    
-                    # Place resting limit bid directly on the book
-                    log(f"📝 [STEP 2: POSTING RESTING BID] Placing Limit Bid (GTC) for {active_shares:.0f}sh {leg2_name} @ ${cheap_target_p:.2f} on book...")
-                    ok2, st2, bid_p2, oid2, tx2, lat2 = place_limit_order(leg2_token, cheap_target_p, active_shares, leg2_name, OrderType.GTC)
-                    
-                    leg2_filled = False
-                    leg2_price = cheap_target_p
+                # Walk up the book up to MAX_LEG1_PRICE until Leg 1 is 100% filled
+                for attempt in range(4):
+                    cur_up_p, cur_up_s, cur_dn_p, cur_dn_s = fetch_book_asks(mkt["up_token"], mkt["down_token"])
+                    cur_ask = cur_up_p if leg1_name == "UP" else cur_dn_p
+                    cur_sz = cur_up_s if leg1_name == "UP" else cur_dn_s
 
-                    if ok2 and st2 == "matched":
-                        leg2_filled = True
-                        leg2_price = bid_p2
-                        log(f"⚡ [LEG 2 INSTANT MATCH] {active_shares:.2f}sh {leg2_name} filled immediately @ ${bid_p2:.2f}!")
-                    elif ok2 and st2 == "live":
-                        log(f"⏳ [RESTING BID ACTIVE] {active_shares:.2f}sh {leg2_name} bid resting @ ${cheap_target_p:.2f} (Order ID: {oid2[:12]}...). Sitting & waiting...")
+                    if cur_ask > MAX_LEG1_PRICE:
+                        log(f"⚠️ [LEG 1 TOO EXPENSIVE] {leg1_name} Ask is ${cur_ask:.2f} > ${MAX_LEG1_PRICE:.2f}. Cannot buy.")
+                        break
 
-                    # Sit and wait loop (Give Leg 2 up to 5 seconds to match)
-                    t_leg1_filled = time.time()
-                    leg1_sold_profit = False
-                    sell_gain = 0.0
-                    last_leg_check = 0.0
+                    log(f"🚀 [STEP 1: BUYING {leg1_name}] Attempt {attempt+1}: Buying {active_shares:.0f}sh @ ${cur_ask:.2f} (Book depth: {cur_sz:.0f}sh)...")
+                    ok1, st1, p1, oid1, tx1, lat1 = place_limit_order(leg1_token, cur_ask, active_shares, leg1_name, OrderType.GTC)
 
-                    while not leg2_filled:
-                        now_loop = time.time()
-                        time_waiting = now_loop - t_leg1_filled
-                        rem_loop = max(0, mkt["window_end"] - int(now_loop))
-
-                        # 1. Check ground truth on Polymarket every ~1 second:
-                        if now_loop - last_leg_check >= 1.0:
-                            last_leg_check = now_loop
-                            if check_both_legs_captured(mkt.get("condition_id", ""), mkt.get("title", "")):
-                                leg2_filled = True
-                                print("\n")
-                                log(f"🎉 [BOTH LEGS CONFIRMED ON POLYMARKET] UP and DOWN both held! Hedge is 100% LOCKED. NEVER SELLING.")
+                    if ok1:
+                        # Wait up to 1.5s for match confirmation
+                        t_wait = time.time()
+                        while time.time() - t_wait < 1.5:
+                            if st1 == "matched" or tx1:
+                                leg1_filled = True
+                                fill_p1 = cur_ask
                                 break
-
-                        # 2. Check if resting order got filled on CLOB
-                        if oid2:
-                            try:
-                                o_data = client.get_order(oid2)
-                                if isinstance(o_data, dict):
-                                    o_status = str(o_data.get("status", "")).upper()
-                                    matched_sz = float(o_data.get("size_matched", 0))
-                                    if o_status == "MATCHED" or matched_sz >= active_shares:
-                                        leg2_filled = True
-                                        leg2_price = cheap_target_p
-                                        print("\n")
-                                        log(f"🎉 [RESTING BID FILLED!] {active_shares:.2f}sh {leg2_name} matched on the book @ ${cheap_target_p:.2f}!")
-                                        break
-                            except Exception:
-                                pass
-
-                        _up_p, _, _dn_p, _ = fetch_book_asks(mkt["up_token"], mkt["down_token"])
-                        cur_cheap_p = _dn_p if leg2_name == "DOWN" else _up_p
-
-                        cur_loop_ts = datetime.datetime.now(datetime.timezone.utc).strftime("%H:%M:%S")
-                        print(f"\r   [{cur_loop_ts} UTC | Waiting for fill | {time_waiting:.1f}s/5.0s | T-{rem_loop:02d}s] {leg2_name} Ask: ${cur_cheap_p:.2f} (Target: <= ${cheap_target_p:.2f})", end="", flush=True)
-
-                        # 3. If market ask drops directly to target, snap it
-                        if cur_cheap_p <= cheap_target_p:
-                            print("\n")
-                            log(f"⚡ [CHEAP ASK HIT] {leg2_name} ask is ${cur_cheap_p:.2f} <= ${cheap_target_p:.2f}! Snapping {active_shares:.2f}sh...")
-                            ok_snap, st_snap, p_snap, _, tx_snap, _ = place_limit_order(leg2_token, cur_cheap_p, active_shares, leg2_name, OrderType.GTC)
-                            if ok_snap:
-                                leg2_price = p_snap
-                                time.sleep(0.4)
-                                if check_both_legs_captured(mkt.get("condition_id", ""), mkt.get("title", "")) or st_snap in ("matched", "live") or tx_snap:
-                                    leg2_filled = True
-                                    log(f"🎉 [LEG 2 SNAP FILLED] Snapped {leg2_name} @ ${p_snap:.2f}! Both legs locked.")
-                                    break
-
-                        # 4. 5-SECOND PROFIT BAILOUT RULE:
-                        # At 5 seconds: Check if both legs captured. If YES -> DO NOT SELL. If NO -> SELL Leg 1.
-                        if time_waiting >= 5.0 or rem_loop <= 10:
-                            print("\n")
-                            # Step A: Check ground truth before taking any action
-                            if check_both_legs_captured(mkt.get("condition_id", ""), mkt.get("title", "")):
-                                leg2_filled = True
-                                log(f"🎉 [BOTH LEGS CONFIRMED AT 5s] Both legs held on Polymarket! Aborting sell, hedge is complete.")
-                                break
-
-                            log(f"⏱️ [5-SECOND HEDGE TIMER EXPIRED ({time_waiting:.1f}s)] Leg 2 NOT captured! Cancelling open orders...")
-                            if oid2:
+                            if oid1:
                                 try:
-                                    client.cancel_order(OrderPayload(orderID=oid2))
+                                    o_data = client.get_order(oid1)
+                                    if isinstance(o_data, dict):
+                                        if str(o_data.get("status", "")).upper() == "MATCHED" or float(o_data.get("size_matched", 0)) >= active_shares:
+                                            leg1_filled = True
+                                            fill_p1 = cur_ask
+                                            break
                                 except Exception:
                                     pass
-                            try:
-                                client.cancel_all()
-                            except Exception:
-                                pass
+                            time.sleep(0.20)
 
-                            # Step B: Double-check right after cancel in case of late fill
+                        if leg1_filled:
+                            log(f"✅ [LEG 1 MATCHED & CONFIRMED] Filled {active_shares:.0f}sh {leg1_name} @ ${fill_p1:.2f}!")
+                            break
+                        else:
+                            log(f"⏳ [ATTEMPT {attempt+1} UNFILLED] Order at ${cur_ask:.2f} did not fill immediately. Cancelling to check next ask...")
+                            if oid1:
+                                try:
+                                    client.cancel_order(OrderPayload(orderID=oid1))
+                                except Exception:
+                                    pass
                             time.sleep(0.25)
-                            if check_both_legs_captured(mkt.get("condition_id", ""), mkt.get("title", "")):
-                                leg2_filled = True
-                                log(f"🎉 [FINAL CHECK AFTER CANCEL] Both legs captured! Aborting sell.")
-                                break
 
-                            # Step C: Only if STILL missing Leg 2, sell unhedged Leg 1 to panic buyers
-                            best_bid_p, best_bid_sz = fetch_book_best_bid(leg1_token)
-                            target_sell_p = round(max(best_bid_p, fill_p1 + 0.01), 2)
-                            log(f"🚀 [SELLING UNHEDGED LEG 1 TO PANIC BUYERS] Best Book Bid: ${best_bid_p:.2f} | Posting Limit Sell for {active_shares:.0f}sh {leg1_name} @ ${target_sell_p:.2f} (+${target_sell_p - fill_p1:.2f} profit)...")
+                # If Leg 1 was NEVER filled, ABORT! Never touch Leg 2!
+                if not leg1_filled:
+                    log(f"⚠️ [LEG 1 NOT FILLED] Could not get filled on {leg1_name} under ${MAX_LEG1_PRICE:.2f}. Aborting setup. NO HEDGE BOUGHT.")
+                    continue
 
-                            ok_s, st_s, sell_p, oid_s, tx_s, _ = place_limit_order(leg1_token, target_sell_p, active_shares, leg1_name, OrderType.GTC, side="SELL")
-                            
-                            # Wait up to 3 seconds for the panic buyers to snap our sell order
-                            t_sell_wait = time.time()
-                            while time.time() - t_sell_wait < 3.0:
-                                if st_s == "matched" or tx_s:
-                                    leg1_sold_profit = True
-                                    sell_gain = round((target_sell_p - fill_p1) * active_shares, 2)
-                                    break
-                                if oid_s:
-                                    try:
-                                        s_data = client.get_order(oid_s)
-                                        if isinstance(s_data, dict) and str(s_data.get("status", "")).upper() == "MATCHED":
-                                            leg1_sold_profit = True
-                                            sell_gain = round((target_sell_p - fill_p1) * active_shares, 2)
-                                            break
-                                    except Exception:
-                                        pass
-                                time.sleep(0.25)
+                # Lock candle ONLY after Leg 1 is 100% in hand!
+                traded_windows.add(w_start)
+                log(f"📌 [LEG 1 IN HAND] Candle {w_start} locked. Proceeding to Step 2: Arbitrage Hedge...")
+                
+                # Step 2: Compute dynamic cheap target to guarantee pair cost <= MAX_COMBINED_COST
+                cheap_target_p = max(0.01, round(MAX_COMBINED_COST - fill_p1, 2))
+                log(f"🎯 [DYNAMIC HEDGE TARGET] Leg 1 @ ${fill_p1:.2f} -> Cheap Leg 2 Target: <= ${cheap_target_p:.2f} (Max pair cost: ${fill_p1 + cheap_target_p:.2f})")
+                    
+                # Place resting limit bid directly on the book
+                log(f"📝 [STEP 2: POSTING RESTING BID] Placing Limit Bid (GTC) for {active_shares:.0f}sh {leg2_name} @ ${cheap_target_p:.2f} on book...")
+                ok2, st2, bid_p2, oid2, tx2, lat2 = place_limit_order(leg2_token, cheap_target_p, active_shares, leg2_name, OrderType.GTC)
+                
+                leg2_filled = False
+                leg2_price = cheap_target_p
 
-                            if leg1_sold_profit:
-                                log(f"💰 [PANIC BUYERS SNAPPED SELL!] Sold {active_shares:.0f}sh {leg1_name} @ ${target_sell_p:.2f}! Locked Profit: +${sell_gain:.2f} USDC!")
-                            else:
-                                # If panic buyers backed off slightly, take best available market bid at or near entry
-                                best_bid_p2, _ = fetch_book_best_bid(leg1_token)
-                                if best_bid_p2 > 0:
-                                    try:
-                                        client.cancel_all()
-                                    except Exception:
-                                        pass
-                                    exit_p = max(best_bid_p2, round(fill_p1 - 0.01, 2))
-                                    log(f"⚡ [FAST MARKET EXIT] Snapping best bid @ ${exit_p:.2f} to completely exit...")
-                                    place_limit_order(leg1_token, exit_p, active_shares, leg1_name, OrderType.FOK, side="SELL")
-                                    leg1_sold_profit = True
-                                    sell_gain = round((exit_p - fill_p1) * active_shares, 2)
+                if ok2 and st2 == "matched":
+                    leg2_filled = True
+                    leg2_price = bid_p2
+                    log(f"⚡ [LEG 2 INSTANT MATCH] {active_shares:.2f}sh {leg2_name} filled immediately @ ${bid_p2:.2f}!")
+                elif ok2 and st2 == "live":
+                    log(f"⏳ [RESTING BID ACTIVE] {active_shares:.2f}sh {leg2_name} bid resting @ ${cheap_target_p:.2f} (Order ID: {oid2[:12]}...). Sitting & waiting...")
+
+                # Sit and wait loop (Give Leg 2 up to 5 seconds to match)
+                t_leg1_filled = time.time()
+                leg1_sold_profit = False
+                sell_gain = 0.0
+                last_leg_check = 0.0
+
+                while not leg2_filled:
+                    now_loop = time.time()
+                    time_waiting = now_loop - t_leg1_filled
+                    rem_loop = max(0, mkt["window_end"] - int(now_loop))
+
+                    # 1. Check ground truth on Polymarket every ~1 second:
+                    if now_loop - last_leg_check >= 1.0:
+                        last_leg_check = now_loop
+                        if check_both_legs_captured(mkt.get("condition_id", ""), mkt.get("title", "")):
+                            leg2_filled = True
+                            print("\n")
+                            log(f"🎉 [BOTH LEGS CONFIRMED ON POLYMARKET] UP and DOWN both held! Hedge is 100% LOCKED. NEVER SELLING.")
                             break
 
+                    # 2. Check if resting order got filled on CLOB
+                    if oid2:
+                        try:
+                            o_data = client.get_order(oid2)
+                            if isinstance(o_data, dict):
+                                o_status = str(o_data.get("status", "")).upper()
+                                matched_sz = float(o_data.get("size_matched", 0))
+                                if o_status == "MATCHED" or matched_sz >= active_shares:
+                                    leg2_filled = True
+                                    leg2_price = cheap_target_p
+                                    print("\n")
+                                    log(f"🎉 [RESTING BID FILLED!] {active_shares:.2f}sh {leg2_name} matched on the book @ ${cheap_target_p:.2f}!")
+                                    break
+                        except Exception:
+                            pass
+
+                    _up_p, _, _dn_p, _ = fetch_book_asks(mkt["up_token"], mkt["down_token"])
+                    cur_cheap_p = _dn_p if leg2_name == "DOWN" else _up_p
+
+                    cur_loop_ts = datetime.datetime.now(datetime.timezone.utc).strftime("%H:%M:%S")
+                    print(f"\r   [{cur_loop_ts} UTC | Waiting for fill | {time_waiting:.1f}s/5.0s | T-{rem_loop:02d}s] {leg2_name} Ask: ${cur_cheap_p:.2f} (Target: <= ${cheap_target_p:.2f})", end="", flush=True)
+
+                    # 3. If market ask drops directly to target, snap it
+                    if cur_cheap_p <= cheap_target_p:
+                        print("\n")
+                        log(f"⚡ [CHEAP ASK HIT] {leg2_name} ask is ${cur_cheap_p:.2f} <= ${cheap_target_p:.2f}! Snapping {active_shares:.2f}sh...")
+                        ok_snap, st_snap, p_snap, _, tx_snap, _ = place_limit_order(leg2_token, cur_cheap_p, active_shares, leg2_name, OrderType.GTC)
+                        if ok_snap:
+                            leg2_price = p_snap
+                            time.sleep(0.4)
+                            if check_both_legs_captured(mkt.get("condition_id", ""), mkt.get("title", "")) or st_snap in ("matched", "live") or tx_snap:
+                                leg2_filled = True
+                                log(f"🎉 [LEG 2 SNAP FILLED] Snapped {leg2_name} @ ${p_snap:.2f}! Both legs locked.")
+                                break
+
+                    # 4. 5-SECOND PROFIT BAILOUT RULE:
+                    # At 5 seconds: Check if both legs captured. If YES -> DO NOT SELL. If NO -> SELL Leg 1.
+                    if time_waiting >= 5.0 or rem_loop <= 10:
+                        print("\n")
+                        # Step A: Check ground truth before taking any action
+                        if check_both_legs_captured(mkt.get("condition_id", ""), mkt.get("title", "")):
+                            leg2_filled = True
+                            log(f"🎉 [BOTH LEGS CONFIRMED AT 5s] Both legs held on Polymarket! Aborting sell, hedge is complete.")
+                            break
+
+                        log(f"⏱️ [5-SECOND HEDGE TIMER EXPIRED ({time_waiting:.1f}s)] Leg 2 NOT captured! Cancelling open orders...")
+                        if oid2:
+                            try:
+                                client.cancel_order(OrderPayload(orderID=oid2))
+                            except Exception:
+                                pass
+                        try:
+                            client.cancel_all()
+                        except Exception:
+                            pass
+
+                        # Step B: Double-check right after cancel in case of late fill
                         time.sleep(0.25)
+                        if check_both_legs_captured(mkt.get("condition_id", ""), mkt.get("title", "")):
+                            leg2_filled = True
+                            log(f"🎉 [FINAL CHECK AFTER CANCEL] Both legs captured! Aborting sell.")
+                            break
+
+                        # Step C: Only if STILL missing Leg 2, sell unhedged Leg 1 to panic buyers
+                        best_bid_p, best_bid_sz = fetch_book_best_bid(leg1_token)
+                        target_sell_p = round(max(best_bid_p, fill_p1 + 0.01), 2)
+                        log(f"🚀 [SELLING UNHEDGED LEG 1 TO PANIC BUYERS] Best Book Bid: ${best_bid_p:.2f} | Posting Limit Sell for {active_shares:.0f}sh {leg1_name} @ ${target_sell_p:.2f} (+${target_sell_p - fill_p1:.2f} profit)...")
+
+                        ok_s, st_s, sell_p, oid_s, tx_s, _ = place_limit_order(leg1_token, target_sell_p, active_shares, leg1_name, OrderType.GTC, side="SELL")
+                        
+                        # Wait up to 3 seconds for the panic buyers to snap our sell order
+                        t_sell_wait = time.time()
+                        while time.time() - t_sell_wait < 3.0:
+                            if st_s == "matched" or tx_s:
+                                leg1_sold_profit = True
+                                sell_gain = round((target_sell_p - fill_p1) * active_shares, 2)
+                                break
+                            if oid_s:
+                                try:
+                                    s_data = client.get_order(oid_s)
+                                    if isinstance(s_data, dict) and str(s_data.get("status", "")).upper() == "MATCHED":
+                                        leg1_sold_profit = True
+                                        sell_gain = round((target_sell_p - fill_p1) * active_shares, 2)
+                                        break
+                                except Exception:
+                                    pass
+                            time.sleep(0.25)
+
+                        if leg1_sold_profit:
+                            log(f"💰 [PANIC BUYERS SNAPPED SELL!] Sold {active_shares:.0f}sh {leg1_name} @ ${target_sell_p:.2f}! Locked Profit: +${sell_gain:.2f} USDC!")
+                        else:
+                            # If panic buyers backed off slightly, take best available market bid at or near entry
+                            best_bid_p2, _ = fetch_book_best_bid(leg1_token)
+                            if best_bid_p2 > 0:
+                                try:
+                                    client.cancel_all()
+                                except Exception:
+                                    pass
+                                exit_p = max(best_bid_p2, round(fill_p1 - 0.01, 2))
+                                log(f"⚡ [FAST MARKET EXIT] Snapping best bid @ ${exit_p:.2f} to completely exit...")
+                                place_limit_order(leg1_token, exit_p, active_shares, leg1_name, OrderType.FOK, side="SELL")
+                                leg1_sold_profit = True
+                                sell_gain = round((exit_p - fill_p1) * active_shares, 2)
+                        break
+
+                    time.sleep(0.25)
 
                     # Final Summary & Rollover
                     print("\n" + "=" * 80)
