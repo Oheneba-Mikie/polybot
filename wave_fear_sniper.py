@@ -48,24 +48,28 @@ CLOB_HOST = "https://clob.polymarket.com"
 GAMMA_HOST = "https://gamma-api.polymarket.com"
 BINANCE_API = "https://api.binance.com/api/v3"
 
-ORDER_SIZE = 5.0                # 5 shares
+ORDER_SIZE = 5.0                # Base starting size: 5.0 shares
+current_stake = 4.90             # Starting stake ($4.90 for 5 shares)
+streak_count = 0                 # Consecutive wins in current streak
+total_streak_profit = 0.0        # Cumulative profit banked in streak
 MIN_SPOT_MOVE = 30.0            # At least $30 move from open
 MIN_ELAPSED_SEC = 200           # At least ~3.5 minutes into candle (T+200s)
-MAX_LEG1_PRICE = 0.89           # Buy panic surging side at <= $0.89
-CHEAP_TARGET_PRICE = 0.08       # Sit and wait for cheap side <= $0.08 (8c)
+MAX_LEG1_PRICE = 0.96           # Allow strong wave up to $0.96
+MAX_COMBINED_COST = 0.98        # Combined pair cost capped at $0.98 (Guaranteed Profit)
 
 def log(msg: str):
     ts = datetime.datetime.now(datetime.timezone.utc).strftime("%H:%M:%S")
     print(f"[{ts}] {msg}", flush=True)
 
 print("=" * 80)
-print("⚡ POLYMARKET 5-SHARE REAL MONEY PANIC WAVE SNIPER (1 TRADE ONLY)")
+print("⚡ POLYMARKET 5-SHARE WINNINGS ROLLOVER COMPOUNDER (STREAK ENGINE)")
 print("=" * 80)
 print(f"• Target Asset:      Bitcoin (BTC 5M)")
-print(f"• Order Size:        {ORDER_SIZE} shares")
+print(f"• Starting Stake:    5.0 shares (${current_stake:.2f} USDC base)")
+print(f"• Rollover Rule:     100% of Winnings Rolled Over on Every Win")
 print(f"• Trigger Rule:      Candle >= 3.5 mins (T+{MIN_ELAPSED_SEC}s) & Move >= ${MIN_SPOT_MOVE:.0f}")
-print(f"• Leg 1 Entry:       Surging panic side <= ${MAX_LEG1_PRICE:.2f}")
-print(f"• Leg 2 Target:      Sit & wait for opposite side <= ${CHEAP_TARGET_PRICE:.2f}")
+print(f"• Leg 1 Entry Cap:   Surging panic side <= ${MAX_LEG1_PRICE:.2f}")
+print(f"• Max Pair Cost:     Combined <= ${MAX_COMBINED_COST:.2f} (Dynamic Hedge Target: $0.98 - Leg1)")
 print("=" * 80)
 
 # 1. Initialize CLOB Client
@@ -194,7 +198,8 @@ while True:
 
         # Display progress line
         move_sign = "+" if move >= 0 else ""
-        print(f"\r[T-{t_rem:03d}s | T+{t_elapsed:03d}s] BTC: ${spot_p:,.1f} ({move_sign}${move:.1f}) | UP: ${up_p:.2f} ({up_s:.0f}sh) | DN: ${dn_p:.2f} ({dn_s:.0f}sh)", end="", flush=True)
+        cur_time = datetime.datetime.now(datetime.timezone.utc).strftime("%H:%M:%S")
+        print(f"\r[{cur_time} UTC | T-{t_rem:03d}s | T+{t_elapsed:03d}s] BTC: ${spot_p:,.1f} ({move_sign}${move:.1f}) | UP: ${up_p:.2f} ({up_s:.0f}sh) | DN: ${dn_p:.2f} ({dn_s:.0f}sh)", end="", flush=True)
 
         # Condition Check:
         # 1. At least 3.5 minutes in (T+200s)
@@ -214,25 +219,31 @@ while True:
                 leg2_token, leg2_name = mkt["up_token"], "UP"
 
             if leg1_ask <= MAX_LEG1_PRICE:
-                log(f"🚀 [STEP 1: BUYING PANIC SIDE] Placing Limit Order (GTC) for {ORDER_SIZE}sh {leg1_name} @ ${leg1_ask:.2f}...")
-                ok1, st1, fill_p1, oid1, tx1, lat1 = place_limit_order(leg1_token, leg1_ask, ORDER_SIZE, leg1_name, OrderType.GTC)
+                # 5 to 8 Whole Shares Sprint Cycle
+                active_shares = float(min(8, max(5, int(current_stake / 0.98))))
+                log(f"🚀 [STEP 1: BUYING PANIC SIDE] Placing Limit Order (GTC) for {active_shares:.0f}sh {leg1_name} @ ${leg1_ask:.2f} (Stake: ${current_stake:.2f})...")
+                ok1, st1, fill_p1, oid1, tx1, lat1 = place_limit_order(leg1_token, leg1_ask, active_shares, leg1_name, OrderType.GTC)
 
                 if ok1 and (st1 == "matched" or tx1):
-                    log(f"✅ [LEG 1 FILLED in {lat1:.1f}ms] Bought {ORDER_SIZE}sh {leg1_name} @ ${fill_p1:.2f}! (Tx: {tx1[:10]}...)")
+                    log(f"✅ [LEG 1 FILLED in {lat1:.1f}ms] Bought {active_shares:.0f}sh {leg1_name} @ ${fill_p1:.2f}! (Tx: {tx1[:10]}...)")
                     
-                    # Step 2: Place resting limit bid for 5 shares at cheap target price directly on the book
-                    log(f"📝 [STEP 2: POSTING RESTING BID] Placing Limit Bid (GTC) for {ORDER_SIZE}sh {leg2_name} @ ${CHEAP_TARGET_PRICE:.2f} on book...")
-                    ok2, st2, bid_p2, oid2, tx2, lat2 = place_limit_order(leg2_token, CHEAP_TARGET_PRICE, ORDER_SIZE, leg2_name, OrderType.GTC)
+                    # Step 2: Compute dynamic cheap target to guarantee pair cost <= $0.98
+                    cheap_target_p = max(0.01, round(MAX_COMBINED_COST - fill_p1, 2))
+                    log(f"🎯 [DYNAMIC HEDGE TARGET] Leg 1 filled @ ${fill_p1:.2f} -> Cheap Leg 2 Target: <= ${cheap_target_p:.2f} (Max pair cost: ${fill_p1 + cheap_target_p:.2f})")
+                    
+                    # Place resting limit bid directly on the book
+                    log(f"📝 [STEP 2: POSTING RESTING BID] Placing Limit Bid (GTC) for {active_shares:.0f}sh {leg2_name} @ ${cheap_target_p:.2f} on book...")
+                    ok2, st2, bid_p2, oid2, tx2, lat2 = place_limit_order(leg2_token, cheap_target_p, active_shares, leg2_name, OrderType.GTC)
                     
                     leg2_filled = False
-                    leg2_price = CHEAP_TARGET_PRICE
+                    leg2_price = cheap_target_p
 
                     if ok2 and st2 == "matched":
                         leg2_filled = True
                         leg2_price = bid_p2
-                        log(f"⚡ [LEG 2 INSTANT MATCH] 5sh {leg2_name} filled immediately @ ${bid_p2:.2f}!")
+                        log(f"⚡ [LEG 2 INSTANT MATCH] {active_shares:.2f}sh {leg2_name} filled immediately @ ${bid_p2:.2f}!")
                     elif ok2 and st2 == "live":
-                        log(f"⏳ [RESTING BID ACTIVE] 5sh {leg2_name} bid resting @ ${CHEAP_TARGET_PRICE:.2f} (Order ID: {oid2[:12]}...). Sitting & waiting...")
+                        log(f"⏳ [RESTING BID ACTIVE] {active_shares:.2f}sh {leg2_name} bid resting @ ${cheap_target_p:.2f} (Order ID: {oid2[:12]}...). Sitting & waiting...")
 
                     # Sit and wait loop
                     while not leg2_filled:
@@ -246,11 +257,11 @@ while True:
                                 if isinstance(o_data, dict):
                                     o_status = str(o_data.get("status", "")).upper()
                                     matched_sz = float(o_data.get("size_matched", 0))
-                                    if o_status == "MATCHED" or matched_sz >= ORDER_SIZE:
+                                    if o_status == "MATCHED" or matched_sz >= active_shares:
                                         leg2_filled = True
-                                        leg2_price = CHEAP_TARGET_PRICE
+                                        leg2_price = cheap_target_p
                                         print("\n")
-                                        log(f"🎉 [RESTING BID FILLED!] 5sh {leg2_name} matched on the book @ ${CHEAP_TARGET_PRICE:.2f}!")
+                                        log(f"🎉 [RESTING BID FILLED!] {active_shares:.2f}sh {leg2_name} matched on the book @ ${cheap_target_p:.2f}!")
                                         break
                             except Exception:
                                 pass
@@ -258,13 +269,14 @@ while True:
                         _up_p, _, _dn_p, _ = fetch_book_asks(mkt["up_token"], mkt["down_token"])
                         cur_cheap_p = _dn_p if leg2_name == "DOWN" else _up_p
 
-                        print(f"\r   [Waiting for fill | T-{rem_loop:02d}s] {leg2_name} Ask: ${cur_cheap_p:.2f} (Resting Bid: ${CHEAP_TARGET_PRICE:.2f})", end="", flush=True)
+                        cur_loop_ts = datetime.datetime.now(datetime.timezone.utc).strftime("%H:%M:%S")
+                        print(f"\r   [{cur_loop_ts} UTC | Waiting for fill | T-{rem_loop:02d}s] {leg2_name} Ask: ${cur_cheap_p:.2f} (Target: <= ${cheap_target_p:.2f})", end="", flush=True)
 
                         # If market ask drops directly to target and resting bid didn't trigger, take it
-                        if cur_cheap_p <= CHEAP_TARGET_PRICE:
+                        if cur_cheap_p <= cheap_target_p:
                             print("\n")
-                            log(f"⚡ [CHEAP ASK HIT] {leg2_name} ask is ${cur_cheap_p:.2f} <= ${CHEAP_TARGET_PRICE:.2f}! Snapping 5sh...")
-                            ok_snap, st_snap, p_snap, _, tx_snap, _ = place_limit_order(leg2_token, cur_cheap_p, ORDER_SIZE, leg2_name, OrderType.GTC)
+                            log(f"⚡ [CHEAP ASK HIT] {leg2_name} ask is ${cur_cheap_p:.2f} <= ${cheap_target_p:.2f}! Snapping {active_shares:.2f}sh...")
+                            ok_snap, st_snap, p_snap, _, tx_snap, _ = place_limit_order(leg2_token, cur_cheap_p, active_shares, leg2_name, OrderType.GTC)
                             if ok_snap and (st_snap == "matched" or tx_snap):
                                 leg2_filled = True
                                 leg2_price = p_snap
@@ -282,28 +294,51 @@ while True:
 
                         time.sleep(0.30)
 
-                    # Final Summary
+                    # Final Summary & Rollover
                     print("\n" + "=" * 80)
                     if leg2_filled:
                         total_cost_per_share = round(fill_p1 + leg2_price, 3)
-                        total_spent = round(total_cost_per_share * ORDER_SIZE, 2)
-                        payout = round(1.00 * ORDER_SIZE, 2)
+                        total_spent = round(total_cost_per_share * active_shares, 2)
+                        payout = round(1.00 * active_shares, 2)
                         profit = round(payout - total_spent, 2)
                         pct = round((profit / total_spent) * 100, 1)
 
+                        streak_count += 1
+                        total_streak_profit += profit
+
                         print("🎉 [ARBITRAGE SEALED & 100% GUARANTEED PROFIT]")
-                        print(f"• Leg 1 ({leg1_name}):   {ORDER_SIZE} shares @ ${fill_p1:.2f}")
-                        print(f"• Leg 2 ({leg2_name}): {ORDER_SIZE} shares @ ${leg2_price:.2f}")
+                        print(f"• Leg 1 ({leg1_name}):   {active_shares:.0f} shares @ ${fill_p1:.2f}")
+                        print(f"• Leg 2 ({leg2_name}): {active_shares:.0f} shares @ ${leg2_price:.2f}")
                         print(f"• Total Paid:       ${total_spent:.2f} (${total_cost_per_share:.3f} per pair)")
                         print(f"• Guaranteed Pay:   ${payout:.2f} USDC (at resolution)")
                         print(f"• Net Profit:       +${profit:.2f} USDC (+{pct}%)")
                         print("=" * 80)
+
+                        if int(active_shares) >= 8:
+                            current_stake = 4.90  # Reset back to 5 shares base!
+                            log(f"🏆 [8-SHARE SPRINT FINISHED!] 8 shares win locked! Banking profit & resetting cycle back to 5 shares.")
+                            log(f"💰 Total Profit Banked to Wallet: +${total_streak_profit:.2f} USDC across {streak_count} wins!")
+                        else:
+                            current_stake = round(payout, 2)  # Roll over winnings!
+                            log(f"🔥 [STREAK WIN #{streak_count}] Winnings Rolled Over! Next Stake: ${current_stake:.2f} USDC | Total Profit Banked: +${total_streak_profit:.2f} USDC")
+                        print("=" * 80)
                     else:
-                        print(f"ℹ️ Trade finished: Leg 1 holding {ORDER_SIZE}sh {leg1_name} @ ${fill_p1:.2f}.")
+                        print(f"ℹ️ Trade finished: Leg 1 holding {active_shares:.0f}sh {leg1_name} @ ${fill_p1:.2f}.")
                         print("=" * 80)
 
-                    print("\n✅ Single-trade run complete. Exiting.\n")
-                    sys.exit(0)
+                    # Wait for candle resolution and payout arrival before rotating
+                    log("⏳ Waiting for candle window to resolve and payout to land...")
+                    while True:
+                        now_res = int(time.time())
+                        rem_res = max(0, mkt["window_end"] - now_res)
+                        if rem_res <= 0:
+                            break
+                        print(f"\r   [Settling in {rem_res:02d}s | Rolling over to next candle...]", end="", flush=True)
+                        time.sleep(1.0)
+                    print("\n")
+                    time.sleep(3.0)
+                    next_sh = min(8, max(5, int(current_stake / 0.98)))
+                    log(f"🔄 [ROLLOVER ACTIVE] Next trade ready: {next_sh} whole shares (${current_stake:.2f} USDC stake). Hunting next wave...\n")
                 else:
                     log(f"ℹ️ Leg 1 order not filled: {res1}. Continuing scan...")
             else:
