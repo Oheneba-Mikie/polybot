@@ -104,6 +104,13 @@ try:
 except Exception as e:
     print(f"⚠️ Balance check error: {e}")
 
+def get_wallet_balance():
+    try:
+        resp = client.get_balance_allowance(params=BalanceAllowanceParams(asset_type=AssetType.COLLATERAL))
+        return float(resp.get("balance", 0)) / 1e6
+    except Exception:
+        return None
+
 session = requests.Session()
 
 def get_binance_data():
@@ -147,33 +154,38 @@ def get_active_market():
             pass
     return None
 
-def check_both_legs_captured(condition_id, title=""):
+def check_both_legs_captured(up_token, down_token):
     try:
         user_addr = POLY_ADDRESS or "0x81ad69942a32f7b1df4d16f0c3f79311f55de50a"
-        # 1. Check open positions
+        # 1. Check open positions strictly by active candle token IDs
         r_pos = session.get(f"https://data-api.polymarket.com/positions?user={user_addr}", timeout=1.5).json()
-        pos_outcomes = set()
+        has_up = False
+        has_down = False
         for p in r_pos:
-            cid = p.get("conditionId", "")
-            t = p.get("title", "")
             sz = float(p.get("size") or 0)
-            if sz > 0 and (cid == condition_id or (title and title.lower() in t.lower())):
-                pos_outcomes.add(p.get("outcome"))
-        if ("Up" in pos_outcomes and "Down" in pos_outcomes) or len(pos_outcomes) >= 2:
+            if sz > 0:
+                asset = str(p.get("asset", ""))
+                if asset == str(up_token):
+                    has_up = True
+                elif asset == str(down_token):
+                    has_down = True
+        if has_up and has_down:
             return True
 
-        # 2. Check recent trade activity in case positions index is updating
+        # 2. Check recent trade activity strictly by active candle token IDs
         r_act = session.get(f"https://data-api.polymarket.com/activity?user={user_addr}&limit=10", timeout=1.5).json()
-        act_buys = set()
+        bought_up = False
+        bought_down = False
         for a in r_act:
-            cid = a.get("conditionId", "")
-            t = a.get("title", "")
             side = a.get("side", "")
             t_type = a.get("type", "")
-            outcome = a.get("outcome", "")
-            if (cid == condition_id or (title and title.lower() in t.lower())) and t_type == "TRADE" and side == "BUY":
-                act_buys.add(outcome)
-        if "Up" in act_buys and "Down" in act_buys:
+            asset = str(a.get("asset", ""))
+            if t_type == "TRADE" and side == "BUY":
+                if asset == str(up_token):
+                    bought_up = True
+                elif asset == str(down_token):
+                    bought_down = True
+        if bought_up and bought_down:
             return True
 
         return False
@@ -271,6 +283,9 @@ while True:
                 leg2_token, leg2_name = mkt["up_token"], "UP"
 
             if leg1_ask <= MAX_LEG1_PRICE:
+                bal_before_trade = get_wallet_balance()
+                if bal_before_trade is not None:
+                    log(f"💼 Pre-Trade USDC Balance: ${bal_before_trade:.2f} USDC")
                 active_shares = float(min(8, max(5, int(current_stake / 0.98))))
                 leg1_filled = False
                 fill_p1 = leg1_ask
@@ -316,9 +331,9 @@ while True:
                             if oid1:
                                 try:
                                     client.cancel_order(OrderPayload(orderID=oid1))
+                                    time.sleep(0.20)
                                 except Exception:
                                     pass
-                            time.sleep(0.25)
 
                 # If Leg 1 was NEVER filled, ABORT! Never touch Leg 2!
                 if not leg1_filled:
@@ -361,7 +376,7 @@ while True:
                     # 1. Check ground truth on Polymarket every ~1 second:
                     if now_loop - last_leg_check >= 1.0:
                         last_leg_check = now_loop
-                        if check_both_legs_captured(mkt.get("condition_id", ""), mkt.get("title", "")):
+                        if check_both_legs_captured(mkt["up_token"], mkt["down_token"]):
                             leg2_filled = True
                             print("\n")
                             log(f"🎉 [BOTH LEGS CONFIRMED ON POLYMARKET] UP and DOWN both held! Hedge is 100% LOCKED. NEVER SELLING.")
@@ -397,7 +412,7 @@ while True:
                         if ok_snap:
                             leg2_price = p_snap
                             time.sleep(0.4)
-                            if check_both_legs_captured(mkt.get("condition_id", ""), mkt.get("title", "")) or st_snap in ("matched", "live") or tx_snap:
+                            if check_both_legs_captured(mkt["up_token"], mkt["down_token"]) or st_snap in ("matched", "live") or tx_snap:
                                 leg2_filled = True
                                 log(f"🎉 [LEG 2 SNAP FILLED] Snapped {leg2_name} @ ${p_snap:.2f}! Both legs locked.")
                                 break
@@ -407,7 +422,7 @@ while True:
                     if time_waiting >= 5.0 or rem_loop <= 10:
                         print("\n")
                         # Step A: Check ground truth before taking any action
-                        if check_both_legs_captured(mkt.get("condition_id", ""), mkt.get("title", "")):
+                        if check_both_legs_captured(mkt["up_token"], mkt["down_token"]):
                             leg2_filled = True
                             log(f"🎉 [BOTH LEGS CONFIRMED AT 5s] Both legs held on Polymarket! Aborting sell, hedge is complete.")
                             break
@@ -425,7 +440,7 @@ while True:
 
                         # Step B: Double-check right after cancel in case of late fill
                         time.sleep(0.25)
-                        if check_both_legs_captured(mkt.get("condition_id", ""), mkt.get("title", "")):
+                        if check_both_legs_captured(mkt["up_token"], mkt["down_token"]):
                             leg2_filled = True
                             log(f"🎉 [FINAL CHECK AFTER CANCEL] Both legs captured! Aborting sell.")
                             break
@@ -474,63 +489,103 @@ while True:
 
                     time.sleep(0.25)
 
-                    # Final Summary & Rollover
-                    print("\n" + "=" * 80)
-                    if leg2_filled:
-                        total_cost_per_share = round(fill_p1 + leg2_price, 3)
-                        total_spent = round(total_cost_per_share * active_shares, 2)
-                        payout = round(1.00 * active_shares, 2)
-                        profit = round(payout - total_spent, 2)
-                        pct = round((profit / total_spent) * 100, 1)
+                # ================================================================
+                # Post-Trade Summary, Rollover & ZERO-LOSS HARD STOP-LOSS GUARD
+                # ================================================================
+                print("\n" + "=" * 80)
+                if leg2_filled:
+                    total_cost_per_share = round(fill_p1 + leg2_price, 3)
+                    total_spent = round(total_cost_per_share * active_shares, 2)
+                    payout = round(1.00 * active_shares, 2)
+                    profit = round(payout - total_spent, 2)
+                    pct = round((profit / total_spent) * 100, 1)
 
-                        streak_count += 1
-                        total_streak_profit += profit
+                    print("🎉 [ARBITRAGE SEALED & GUARANTEED]")
+                    print(f"• Leg 1 ({leg1_name}):   {active_shares:.0f} shares @ ${fill_p1:.2f}")
+                    print(f"• Leg 2 ({leg2_name}): {active_shares:.0f} shares @ ${leg2_price:.2f}")
+                    print(f"• Total Paid:       ${total_spent:.2f} (${total_cost_per_share:.3f} per pair)")
+                    print(f"• Payout at Settle: ${payout:.2f} USDC")
+                    print(f"• Expected Profit:  {'+$' if profit >= 0 else '-$'}{abs(profit):.2f} USDC ({'+' if pct >= 0 else ''}{pct}%)")
+                    print("=" * 80)
 
-                        print("🎉 [ARBITRAGE SEALED & 100% GUARANTEED PROFIT]")
-                        print(f"• Leg 1 ({leg1_name}):   {active_shares:.0f} shares @ ${fill_p1:.2f}")
-                        print(f"• Leg 2 ({leg2_name}): {active_shares:.0f} shares @ ${leg2_price:.2f}")
-                        print(f"• Total Paid:       ${total_spent:.2f} (${total_cost_per_share:.3f} per pair)")
-                        print(f"• Guaranteed Pay:   ${payout:.2f} USDC (at resolution)")
-                        print(f"• Net Profit:       +${profit:.2f} USDC (+{pct}%)")
-                        print("=" * 80)
+                    # CRITICAL ZERO-LOSS CHECK (Even -$0.01 loss stops trading immediately)
+                    if profit < 0:
+                        print("\n" + "🛑" * 40)
+                        log(f"❌ [CRITICAL LOSS DETECTED - HARD STOP-LOSS TRIGGERED]")
+                        log(f"   Arbitrage combined cost was ${total_cost_per_share:.3f} >= $1.00! Loss: -${abs(profit):.2f} USDC")
+                        log(f"   Hard stop requested by user: Terminating bot execution immediately.")
+                        print("🛑" * 40 + "\n")
+                        sys.exit(0)
 
-                        if int(active_shares) >= 8:
-                            current_stake = 4.90  # Reset back to 5 shares base!
-                            log(f"🏆 [8-SHARE SPRINT FINISHED!] 8 shares win locked! Banking profit & resetting cycle back to 5 shares.")
-                            log(f"💰 Total Profit Banked to Wallet: +${total_streak_profit:.2f} USDC across {streak_count} wins!")
-                        else:
-                            current_stake = round(payout, 2)  # Roll over winnings!
-                            log(f"🔥 [STREAK WIN #{streak_count}] Winnings Rolled Over! Next Stake: ${current_stake:.2f} USDC | Total Profit Banked: +${total_streak_profit:.2f} USDC")
-                        print("=" * 80)
-                    elif leg1_sold_profit:
-                        streak_count += 1
-                        total_streak_profit += max(0.0, sell_gain)
-                        print("💰 [PANIC BUYER PROFIT BAILOUT COMPLETED]")
-                        print(f"• Bought Leg 1 ({leg1_name}): {active_shares:.0f} shares @ ${fill_p1:.2f}")
-                        print(f"• Sold to Panic Buyers:  {active_shares:.0f} shares @ ${target_sell_p if 'target_sell_p' in locals() else fill_p1:.2f}")
-                        print(f"• Net PnL on Trade:      {'+$' if sell_gain >= 0 else '-$'}{abs(sell_gain):.2f} USDC")
-                        print(f"• Streak Profit Banked:  +${total_streak_profit:.2f} USDC across {streak_count} rounds")
-                        print("=" * 80)
+                    streak_count += 1
+                    total_streak_profit += profit
+
+                    if int(active_shares) >= 8:
+                        current_stake = 4.90  # Reset back to 5 shares base!
+                        log(f"🏆 [8-SHARE SPRINT FINISHED!] 8 shares win locked! Banking profit & resetting cycle back to 5 shares.")
+                        log(f"💰 Total Profit Banked to Wallet: +${total_streak_profit:.2f} USDC across {streak_count} wins!")
                     else:
-                        print(f"ℹ️ Trade finished: Leg 1 holding {active_shares:.0f}sh {leg1_name} @ ${fill_p1:.2f}.")
-                        print("=" * 80)
+                        current_stake = round(payout, 2)  # Roll over winnings!
+                        log(f"🔥 [STREAK WIN #{streak_count}] Winnings Rolled Over! Next Stake: ${current_stake:.2f} USDC | Total Profit Banked: +${total_streak_profit:.2f} USDC")
+                    print("=" * 80)
 
-                    # Wait for candle resolution and payout arrival before rotating
-                    log("⏳ Waiting for candle window to resolve and payout to land...")
-                    while True:
-                        now_res = int(time.time())
-                        rem_res = max(0, mkt["window_end"] - now_res)
-                        if rem_res <= 0:
-                            break
-                        print(f"\r   [Settling in {rem_res:02d}s | Rolling over to next candle...]", end="", flush=True)
-                        time.sleep(1.0)
-                    print("\n")
-                    time.sleep(3.0)
-                    next_sh = min(8, max(5, int(current_stake / 0.98)))
-                    log(f"🔄 [ROLLOVER ACTIVE] Next trade ready: {next_sh} whole shares (${current_stake:.2f} USDC stake). Hunting next wave...\n")
+                elif leg1_sold_profit:
+                    print("💰 [PANIC BUYER BAILOUT COMPLETED]")
+                    print(f"• Bought Leg 1 ({leg1_name}): {active_shares:.0f} shares @ ${fill_p1:.2f}")
+                    print(f"• Sold to Panic Buyers:  {active_shares:.0f} shares")
+                    print(f"• Net PnL on Trade:      {'+$' if sell_gain >= 0 else '-$'}{abs(sell_gain):.2f} USDC")
+                    print("=" * 80)
+
+                    # CRITICAL ZERO-LOSS CHECK ON BAILOUT (Even -$0.01 loss stops trading immediately)
+                    if sell_gain < 0:
+                        print("\n" + "🛑" * 40)
+                        log(f"❌ [CRITICAL LOSS DETECTED - HARD STOP-LOSS TRIGGERED]")
+                        log(f"   Panic bailout sell resulted in a loss: -${abs(sell_gain):.2f} USDC!")
+                        log(f"   Hard stop requested by user: Terminating bot execution immediately.")
+                        print("🛑" * 40 + "\n")
+                        sys.exit(0)
+
+                    streak_count += 1
+                    total_streak_profit += sell_gain
+                    print(f"• Streak Profit Banked:  +${total_streak_profit:.2f} USDC across {streak_count} rounds")
+                    print("=" * 80)
+
                 else:
-                    log(f"⚠️ [LEG 1 REJECTED/FAILED] Status: {st1}. Candle not locked. Ready to retry if shares appear.")
-            else:
+                    # Unhedged position that failed to sell
+                    print("\n" + "🛑" * 40)
+                    log(f"❌ [CRITICAL UNHEDGED POSITION - HARD STOP-LOSS TRIGGERED]")
+                    log(f"   Position is unhedged and could not be sold! Holding {active_shares:.0f}sh {leg1_name} @ ${fill_p1:.2f}.")
+                    log(f"   Hard stop requested by user: Terminating bot execution immediately to prevent automatic trading.")
+                    print("🛑" * 40 + "\n")
+                    sys.exit(0)
+
+                # Wait for candle resolution and payout arrival before rotating
+                log("⏳ Waiting for candle window to resolve and payout to land...")
+                while True:
+                    now_res = int(time.time())
+                    rem_res = max(0, mkt["window_end"] - now_res)
+                    if rem_res <= 0:
+                        break
+                    print(f"\r   [Settling in {rem_res:02d}s | Rolling over to next candle...]", end="", flush=True)
+                    time.sleep(1.0)
+                print("\n")
+                time.sleep(5.0)
+
+                # ULTIMATE GROUND TRUTH: Live Wallet Balance Check
+                bal_after_trade = get_wallet_balance()
+                if bal_before_trade is not None and bal_after_trade is not None:
+                    wallet_diff = round(bal_after_trade - bal_before_trade, 2)
+                    log(f"💰 [WALLET BALANCE AUDIT] Before Trade: ${bal_before_trade:.2f} | After Settlement: ${bal_after_trade:.2f} | Net Change: {'+$' if wallet_diff >= 0 else '-$'}{abs(wallet_diff):.2f} USDC")
+                    if wallet_diff <= -0.01:
+                        print("\n" + "🛑" * 40)
+                        log(f"❌ [CRITICAL LOSS ON WALLET BALANCE - HARD STOP-LOSS TRIGGERED]")
+                        log(f"   Actual wallet USDC dropped by -${abs(wallet_diff):.2f} USDC (>= $0.01 loss threshold)!")
+                        log(f"   Hard stop requested by user: Terminating bot execution immediately.")
+                        print("🛑" * 40 + "\n")
+                        sys.exit(0)
+
+                next_sh = min(8, max(5, int(current_stake / 0.98)))
+                log(f"🔄 [ROLLOVER ACTIVE] Next trade ready: {next_sh} whole shares (${current_stake:.2f} USDC stake). Hunting next wave...\n")
                 pass
 
         time.sleep(0.40)
