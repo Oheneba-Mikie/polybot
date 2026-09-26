@@ -121,7 +121,16 @@ def check_drawdown_limit():
     if INITIAL_WALLET_BALANCE is None:
         INITIAL_WALLET_BALANCE = get_wallet_balance()
         return False
-    cur_bal = get_wallet_balance()
+    # Poll up to 3 seconds for Polymarket balance to settle
+    cur_bal = None
+    for _ in range(3):
+        cur_bal = get_wallet_balance()
+        if cur_bal is not None:
+            drawdown = round(INITIAL_WALLET_BALANCE - cur_bal, 2)
+            if drawdown < MAX_DRAWDOWN:
+                return False
+        time.sleep(1.0)
+
     if cur_bal is not None:
         drawdown = round(INITIAL_WALLET_BALANCE - cur_bal, 2)
         if drawdown >= MAX_DRAWDOWN:
@@ -421,6 +430,7 @@ while True:
                 # ==============================================================
                 # CRITICAL DRAWDOWN GUARD: STOP IF BALANCE DROPS -$0.50 FROM INITIAL
                 # ==============================================================
+                time.sleep(1.0)
                 check_drawdown_limit()
 
                 cur_live = get_wallet_balance()
