@@ -102,12 +102,37 @@ def get_wallet_balance():
     except Exception:
         return None
 
-live_bal = get_wallet_balance()
+INITIAL_WALLET_BALANCE = get_wallet_balance()
+MAX_DRAWDOWN = 0.50  # Stop trading if balance drops -$0.50 from initial
+
 print(f"💼 Connected Wallet: {POLY_ADDRESS}")
-print(f"💰 Live USDC Balance: ${live_bal:.2f} USDC" if live_bal is not None else "💰 Live USDC Balance: [Query failed]")
-if live_bal is not None and live_bal < 1.0:
+if INITIAL_WALLET_BALANCE is not None:
+    print(f"💰 Initial Starting Balance: ${INITIAL_WALLET_BALANCE:.2f} USDC")
+    print(f"🛑 Max Drawdown Guard: Will stop bot if balance drops to <= ${INITIAL_WALLET_BALANCE - MAX_DRAWDOWN:.2f} USDC (-$0.50 from initial)")
+else:
+    print("💰 Initial Balance: [Query failed]")
+
+if INITIAL_WALLET_BALANCE is not None and INITIAL_WALLET_BALANCE < 1.0:
     print("⚠️ Warning: Balance is under $1.00 USDC. Please top up wallet.")
     sys.exit(1)
+
+def check_drawdown_limit():
+    global INITIAL_WALLET_BALANCE
+    if INITIAL_WALLET_BALANCE is None:
+        INITIAL_WALLET_BALANCE = get_wallet_balance()
+        return False
+    cur_bal = get_wallet_balance()
+    if cur_bal is not None:
+        drawdown = round(INITIAL_WALLET_BALANCE - cur_bal, 2)
+        if drawdown >= MAX_DRAWDOWN:
+            print("\n" + "🛑" * 40)
+            log(f"❌ [MAX DRAWDOWN REACHED: -$0.50 FROM INITIAL BALANCE]")
+            log(f"   Initial Balance: ${INITIAL_WALLET_BALANCE:.2f} USDC")
+            log(f"   Current Balance: ${cur_bal:.2f} USDC (Total Loss: -${drawdown:.2f} USDC >= -${MAX_DRAWDOWN:.2f})")
+            log(f"   Hard stop limit reached. Terminating bot immediately to protect capital.")
+            print("🛑" * 40 + "\n")
+            sys.exit(0)
+    return False
 
 session = requests.Session()
 
@@ -228,6 +253,7 @@ while True:
         # 3. At least $30 move from open
         # 4. Not in final 15s
         if w_start not in traded_windows and t_elapsed >= MIN_ELAPSED_SEC and t_rem >= 15 and abs(move) >= MIN_SPOT_MOVE:
+            check_drawdown_limit()
             wave_dir = "UP" if move > 0 else "DOWN"
             print("\n")
             log(f"🔥 [MOMENTUM SETUP DETECTED] Candle is {t_elapsed}s in | BTC Move: {move_sign}${move:.1f} >= ${MIN_SPOT_MOVE:.0f}")
@@ -381,22 +407,28 @@ while True:
                 print(f"• Net PnL:       {'+$' if trade_pnl >= 0 else '-$'}{abs(trade_pnl):.2f} USD")
                 print("=" * 80)
 
-                # CRITICAL ZERO-LOSS HARD STOP
-                if trade_pnl < 0:
-                    print("\n" + "🛑" * 40)
-                    log(f"❌ [CRITICAL LOSS DETECTED - HARD STOP-LOSS TRIGGERED]")
-                    log(f"   Trade resulted in a loss: -${abs(trade_pnl):.2f} USD!")
-                    log(f"   Hard stop requested: Terminating bot immediately to protect capital.")
-                    print("🛑" * 40 + "\n")
-                    sys.exit(0)
-
-                # Compounding Rollover on Win / Breakeven
-                streak_count += 1
                 total_profit += trade_pnl
-                current_stake = round(current_stake + trade_pnl, 2)
-                
-                log(f"🔥 [WIN STREAK #{streak_count}] Total Profit Banked: +${total_profit:.2f} USD")
-                log(f"🔄 Next Trade Stake Rollover: ${current_stake:.2f} USD\n")
+
+                if trade_pnl < 0:
+                    log(f"⚠️ [DIP LOSS OCCURRED] Trade closed at -${abs(trade_pnl):.2f} USD.")
+                    current_stake = STARTING_STAKE  # Reset to $1.00 base stake
+                    streak_count = 0
+                else:
+                    streak_count += 1
+                    current_stake = round(current_stake + trade_pnl, 2)
+                    log(f"🔥 [WIN STREAK #{streak_count}] Profit Locked! Rolling over to next stake: ${current_stake:.2f} USD")
+
+                # ==============================================================
+                # CRITICAL DRAWDOWN GUARD: STOP IF BALANCE DROPS -$0.50 FROM INITIAL
+                # ==============================================================
+                check_drawdown_limit()
+
+                cur_live = get_wallet_balance()
+                if cur_live is not None and INITIAL_WALLET_BALANCE is not None:
+                    cur_diff = round(cur_live - INITIAL_WALLET_BALANCE, 2)
+                    diff_str = f"+${cur_diff:.2f}" if cur_diff >= 0 else f"-${abs(cur_diff):.2f}"
+                    log(f"💼 Balance: ${cur_live:.2f} USDC (Change from initial: {diff_str} | Stop threshold: -${MAX_DRAWDOWN:.2f})")
+                log(f"💰 Session Net Profit: {'+$' if total_profit >= 0 else '-$'}{abs(total_profit):.2f} USD\n")
 
         time.sleep(0.40)
     except KeyboardInterrupt:
